@@ -1,0 +1,145 @@
+{
+  "source": "Cavite_BRT_P2P_and_APMS_Locations_Updated.xlsx — sheet \"Bus Shelter Locations\" (client-provided, used as given)",
+  "stations": [
+    {
+      "name": "Bus Shelter S1",
+      "code": "S1",
+      "sequence": 1,
+      "latitude": 14.4442,
+      "longitude": 120.915439
+    },
+    {
+      "name": "Bus Shelter S2",
+      "code": "S2",
+      "sequence": 2,
+      "latitude": 14.434538,
+      "longitude": 120.921902
+    },
+    {
+      "name": "Bus Shelter S3",
+      "code": "S3",
+      "sequence": 3,
+      "latitude": 14.422564,
+      "longitude": 120.923314
+    },
+    {
+      "name": "Bus Shelter S4",
+      "code": "S4",
+      "sequence": 4,
+      "latitude": 14.418168,
+      "longitude": 120.923638
+    },
+    {
+      "name": "Bus Shelter S5",
+      "code": "S5",
+      "sequence": 5,
+      "latitude": 14.41375,
+      "longitude": 120.923529
+    },
+    {
+      "name": "Bus Shelter S6",
+      "code": "S6",
+      "sequence": 6,
+      "latitude": 14.413251,
+      "longitude": 120.920621
+    },
+    {
+      "name": "Bus Shelter S7",
+      "code": "S7",
+      "sequence": 7,
+      "latitude": 14.406357,
+      "longitude": 120.917788
+    },
+    {
+      "name": "Bus Shelter S8",
+      "code": "S8",
+      "sequence": 8,
+      "latitude": 14.388953,
+      "longitude": 120.918858
+    },
+    {
+      "name": "Bus Shelter S9",
+      "code": "S9",
+      "sequence": 9,
+      "latitude": 14.38545,
+      "longitude": 120.917751
+    },
+    {
+      "name": "Bus Shelter S10",
+      "code": "S10",
+      "sequence": 10,
+      "latitude": 14.378492,
+      "longitude": 120.915977
+    },
+    {
+      "name": "Bus Shelter S11",
+      "code": "S11",
+      "sequence": 11,
+      "latitude": 14.376261,
+      "longitude": 120.906739
+    },
+    {
+      "name": "Bus Shelter S12",
+      "code": "S12",
+      "sequence": 12,
+      "latitude": 14.373099,
+      "longitude": 120.898497
+    },
+    {
+      "name": "Bus Shelter S13",
+      "code": "S13",
+      "sequence": 13,
+      "latitude": 14.369268,
+      "longitude": 120.891092
+    },
+    {
+      "name": "Bus Shelter S14",
+      "code": "S14",
+      "sequence": 14,
+      "latitude": 14.361723,
+      "longitude": 120.890318
+    },
+    {
+      "name": "Bus Shelter S15",
+      "code": "S15",
+      "sequence": 15,
+      "latitude": 14.356773,
+      "longitude": 120.888204
+    },
+    {
+      "name": "Bus Shelter S16",
+      "code": "S16",
+      "sequence": 16,
+      "latitude": 14.360486,
+      "longitude": 120.882827
+    },
+    {
+      "name": "Bus Shelter S17",
+      "code": "S17",
+      "sequence": 17,
+      "latitude": 14.359502,
+      "longitude": 120.877293
+    },
+    {
+      "name": "Bus Shelter S18",
+      "code": "S18",
+      "sequence": 18,
+      "latitude": 14.351796,
+      "longitude": 120.875077
+    },
+    {
+      "name": "Bus Shelter S19",
+      "code": "S19",
+      "sequence": 19,
+      "latitude": 14.34653,
+      "longitude": 120.87543
+    },
+    {
+      "name": "Bus Shelter S20",
+      "code": "S20",
+      "sequence": 20,
+      "latitude": 14.344121,
+      "longitude": 120.868874
+    }
+  ]
+}

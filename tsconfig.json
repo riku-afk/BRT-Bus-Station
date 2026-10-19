@@ -1,0 +1,68 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/client/*"
+      ],
+      "@config/*": [
+        "./src/server/config/*"
+      ],
+      "@core/*": [
+        "./src/server/core/*"
+      ],
+      "@lib/*": [
+        "./src/server/lib/*"
+      ],
+      "@middleware/*": [
+        "./src/server/middleware/*"
+      ],
+      "@modules/*": [
+        "./src/server/modules/*"
+      ],
+      "@integrations/*": [
+        "./src/server/integrations/*"
+      ],
+      "@shared/*": [
+        "./src/shared/*"
+      ]
+    }
+  },
+  "include": [
+    "next-env.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "scripts/**/*.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    ".next-qa/types/**/*.ts",
+    ".next-qa/dev/types/**/*.ts",
+    ".next-build/types/**/*.ts",
+    ".next-build/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "plan"
+  ]
+}

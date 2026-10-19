@@ -1,0 +1,196 @@
+/* Limit class detection to src/ so bun.lock and plan/ docs are not scanned. */
+@import 'tailwindcss' source('../..');
+@import 'tw-animate-css';
+@import 'leaflet/dist/leaflet.css';
+
+@custom-variant dark (&:is(.dark *));
+
+/* BRT palette (placeholder, restyle in the polish phase): deep teal with an amber accent. */
+:root {
+  --radius: 0.625rem;
+  --background: oklch(0.985 0.004 197);
+  --foreground: oklch(0.22 0.03 215);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.22 0.03 215);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.03 215);
+  --primary: oklch(0.36 0.06 200);
+  --primary-foreground: oklch(0.98 0.01 197);
+  --secondary: oklch(0.95 0.012 197);
+  --secondary-foreground: oklch(0.26 0.04 210);
+  --muted: oklch(0.955 0.008 197);
+  --muted-foreground: oklch(0.5 0.02 210);
+  --accent: oklch(0.93 0.025 190);
+  --accent-foreground: oklch(0.26 0.04 210);
+  --destructive: oklch(0.58 0.22 27);
+  --success: oklch(0.6 0.14 155);
+  --warning: oklch(0.8 0.15 80);
+  --warning-foreground: oklch(0.3 0.07 60);
+  --border: oklch(0.9 0.012 200);
+  --input: oklch(0.9 0.012 200);
+  --ring: oklch(0.5 0.08 200);
+  --sidebar: oklch(0.27 0.045 205);
+  --sidebar-foreground: oklch(0.93 0.015 197);
+  --sidebar-accent: oklch(0.34 0.05 203);
+  --sidebar-accent-foreground: oklch(0.98 0.01 197);
+  --sidebar-border: oklch(0.34 0.04 205);
+}
+
+.dark {
+  --background: oklch(0.17 0.015 215);
+  --foreground: oklch(0.95 0.01 197);
+  --card: oklch(0.21 0.02 213);
+  --card-foreground: oklch(0.95 0.01 197);
+  --popover: oklch(0.21 0.02 213);
+  --popover-foreground: oklch(0.95 0.01 197);
+  --primary: oklch(0.72 0.1 190);
+  --primary-foreground: oklch(0.18 0.03 210);
+  --secondary: oklch(0.27 0.025 210);
+  --secondary-foreground: oklch(0.95 0.01 197);
+  --muted: oklch(0.26 0.02 212);
+  --muted-foreground: oklch(0.7 0.02 205);
+  --accent: oklch(0.3 0.035 200);
+  --accent-foreground: oklch(0.95 0.01 197);
+  --destructive: oklch(0.65 0.2 25);
+  --success: oklch(0.7 0.14 155);
+  --warning: oklch(0.78 0.14 80);
+  --warning-foreground: oklch(0.22 0.05 60);
+  --border: oklch(0.32 0.02 210);
+  --input: oklch(0.32 0.02 210);
+  --ring: oklch(0.6 0.08 195);
+  --sidebar: oklch(0.14 0.015 215);
+  --sidebar-foreground: oklch(0.9 0.015 197);
+  --sidebar-accent: oklch(0.24 0.03 205);
+  --sidebar-accent-foreground: oklch(0.98 0.01 197);
+  --sidebar-border: oklch(0.25 0.02 210);
+}
+
+@theme inline {
+  --font-sans: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Auth pages, form side: pale surface with soft diagonal teal bands in the corners. */
+@utility auth-surface {
+  background:
+    linear-gradient(135deg, transparent 72%, color-mix(in oklch, var(--primary) 6%, transparent) 72%, transparent 86%),
+    linear-gradient(135deg, color-mix(in oklch, var(--primary) 5%, transparent) 0%, transparent 18%),
+    var(--background);
+}
+
+/* App sidebar: deep teal with a soft glow at the top, matching the sign-in brand. */
+@utility app-sidebar {
+  color: var(--sidebar-foreground);
+  background:
+    radial-gradient(120% 40% at 0% 0%, color-mix(in oklch, var(--sidebar-accent) 70%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--sidebar), color-mix(in oklch, var(--sidebar) 80%, black));
+}
+
+/* Thin, low-contrast scrollbar for the dark sidebar. */
+@utility sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--sidebar-foreground) 20%, transparent) transparent;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+/* Map markers (Leaflet divIcons) */
+.brt-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 9999px;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: 2px solid #fff;
+  font-size: 11px;
+  font-weight: 600;
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+  cursor: pointer;
+  position: relative;
+}
+/* A finger needs about 44 px: the visible circle is 26 px, so the tappable area is widened around it (the pseudo-element is part of the marker). */
+.brt-marker { position: relative; }
+.brt-marker::after { content: ''; position: absolute; inset: -9px; border-radius: 9999px; }
+.brt-marker--origin { background: #16a34a; color: #fff; }
+.brt-marker--destination { background: #dc2626; color: #fff; }
+.brt-marker--inactive { opacity: 0.45; }
+
+/* Live bus markers */
+.brt-bus {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background: #f59e0b;
+  color: #1f2937;
+  border: 2px solid #fff;
+  box-shadow: 0 1px 5px rgb(0 0 0 / 0.5);
+}
+/* Stopped at a station: a green halo. */
+.brt-bus--dwell { box-shadow: 0 0 0 3px rgb(22 163 74 / 0.7), 0 1px 5px rgb(0 0 0 / 0.5); }
+/* The selected bus (its details are open): a blue ring. */
+.brt-bus--selected { box-shadow: 0 0 0 4px rgb(2 132 199 / 0.85), 0 1px 5px rgb(0 0 0 / 0.5); cursor: pointer; }
+.brt-bus { cursor: pointer; }
+
+/* Valid-ticket count on a station marker. */
+.brt-badge {
+  position: absolute;
+  top: -8px;
+  right: -10px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9999px;
+  background: #dc2626;
+  color: #fff;
+  border: 2px solid #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
+}
+
+/* A station where a bus is waiting (available): a green ring. */
+.brt-marker--has-bus { box-shadow: 0 0 0 3px rgb(22 163 74 / 0.85), 0 1px 4px rgb(0 0 0 / 0.4); }

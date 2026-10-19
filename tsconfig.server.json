@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "incremental": false, "types": ["bun", "node", "vitest/globals"] },
+  "include": ["src/server/**/*.ts", "src/shared/**/*.ts", "src/app/api/**/*.ts", "scripts/**/*.ts", "next-env.d.ts"],
+  "exclude": ["node_modules"]
+}
