@@ -1,0 +1,18 @@
+.next/
+.next-*/
+node_modules/
+.env
+.env.local
+coverage/
+.cache/
+*.tsbuildinfo
+next-env.d.ts
+.local-storage/
+.local-storage-*/
+*.log
+backups/
+
+# Reference files kept out of the repository
+Cavite_BRT_P2P_and_APMS_Locations_Updated.xlsx
+payment_methods.webp
+public/brt-design-handoff/
