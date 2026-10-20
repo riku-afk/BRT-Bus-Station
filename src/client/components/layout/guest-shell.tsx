@@ -13,6 +13,8 @@ export function GuestShell() {
   const { data } = useSystemInfo();
   const { pathname } = useLocation();
   const onAuthPage = pathname === '/login' || pathname === '/register';
+  // Sign in and register draw their own full-screen frame (brand panel, theme toggle, version), so no top bar here.
+  if (onAuthPage) return <Outlet />;
   return (
     <div className="flex min-h-svh flex-col bg-background text-foreground">
       <header className="sticky top-0 z-20 flex h-16 items-center justify-between gap-3 border-b bg-surface px-4 sm:px-6">

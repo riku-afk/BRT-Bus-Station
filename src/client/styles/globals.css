@@ -17,6 +17,7 @@
   --track: #e9ecf5;
   --navy: #0f172a;
   --navy-2: #1e293b;
+  --auth-dot: #d5dae6;
 
   /* map colours, for the Leaflet markers and keys */
   --land: #edf1e6;
@@ -90,6 +91,7 @@
   --track: #1f2944;
   --navy: #060a16;
   --navy-2: #141c33;
+  --auth-dot: #1e2947;
   --land: #18213a;
   --water: #10284a;
   --park: #1a3530;
@@ -141,12 +143,11 @@
   --radius-3xl: var(--radius-hero);
 }
 
-/* Auth pages, form side: pale surface with soft diagonal teal bands in the corners. */
-@utility auth-surface {
-  background:
-    linear-gradient(135deg, transparent 72%, color-mix(in oklch, var(--primary) 6%, transparent) 72%, transparent 86%),
-    linear-gradient(135deg, color-mix(in oklch, var(--primary) 5%, transparent) 0%, transparent 18%),
-    var(--background);
+/* Auth pages, form side: the app background with a subtle dot pattern (design-handoff/auth). */
+@utility auth-dots {
+  background-color: var(--background);
+  background-image: radial-gradient(var(--auth-dot) 1.5px, transparent 1.5px);
+  background-size: 22px 22px;
 }
 
 /* App sidebar: deep teal with a soft glow at the top, matching the sign-in brand. */
