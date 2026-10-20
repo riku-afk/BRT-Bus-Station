@@ -50,7 +50,7 @@ describe('TicketCard', () => {
   it('shows the route, reference, fare and status', () => {
     view(ticket());
     expect(screen.getByText('Bus Shelter S3 → Bus Shelter S12')).toBeTruthy();
-    expect(screen.getByText('BRT-ABC234')).toBeTruthy();
+    expect(screen.queryByText('BRT-ABC234')).toBeNull(); // not until it is paid
     expect(screen.getByText('₱35.00')).toBeTruthy();
     expect(screen.getByText('Awaiting payment')).toBeTruthy();
   });
@@ -69,9 +69,10 @@ describe('TicketCard', () => {
   it('a paid ticket can only be viewed: no pay, no cancel (no refunds)', () => {
     view(ticket({ status: 'paid', paidAt: '2026-10-16T02:05:00.000Z', payBeforeAt: null }), { onPay: vi.fn(), onCancel: vi.fn() });
     expect(screen.getByText('Paid')).toBeTruthy();
+    expect(screen.getByText('BRT-ABC234')).toBeTruthy(); // the reference appears once it is paid
     expect(screen.queryByRole('button', { name: 'Pay now' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
-    expect(screen.getByRole('link', { name: 'View' }).getAttribute('href')).toBe('/tickets/t-1');
+    expect(screen.getByRole('link', { name: 'View ticket' }).getAttribute('href')).toBe('/tickets/t-1');
   });
 
   it.each(['used', 'expired', 'cancelled'] as const)('a %s ticket offers no actions', (status) => {

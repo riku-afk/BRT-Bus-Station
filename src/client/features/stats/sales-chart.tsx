@@ -26,20 +26,20 @@ export function SalesChart({ days }: { days: readonly DayStats[] }) {
   return (
     <div className="flex flex-col gap-3" data-testid="sales-chart">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div role="group" aria-label="What to chart" className="flex gap-1">
+        <div role="group" aria-label="What to chart" className="flex gap-1 rounded-xl bg-surface-2 p-1">
           {(Object.keys(METRICS) as MetricKey[]).map((key) => (
             <button
               key={key}
               type="button"
               aria-pressed={metric === key}
               onClick={() => setMetric(key)}
-              className={cn('rounded-md border px-2.5 py-1 text-xs font-medium transition-colors', metric === key ? 'border-primary bg-primary/10 text-foreground' : 'text-muted-foreground hover:bg-accent')}
+              className={cn('h-8 rounded-[9px] px-3 text-xs font-bold transition-colors', metric === key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')}
             >
               {METRICS[key].label}
             </button>
           ))}
         </div>
-        <button type="button" onClick={() => setTable((t) => !t)} aria-pressed={table} className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground">
+        <button type="button" onClick={() => setTable((t) => !t)} aria-pressed={table} className="text-xs font-semibold text-[#4f46e5] underline-offset-2 hover:underline dark:text-[#a5b4fc]">
           {table ? 'Show as chart' : 'Show as table'}
         </button>
       </div>
@@ -112,14 +112,14 @@ export function SalesChart({ days }: { days: readonly DayStats[] }) {
                       data-testid="chart-bar"
                       data-value={value}
                       aria-label={`${shortDate(d.date)}: ${METRICS[metric].format(value)}`}
-                      className="group flex h-full flex-1 items-end outline-none"
+                      className="group flex h-full flex-1 items-end justify-center rounded-md outline-none focus-visible:bg-surface-2"
                       onMouseEnter={() => setActive(i)}
                       onFocus={() => setActive(i)}
                       onBlur={() => setActive(null)}
                     >
                       <div
-                        className={cn('w-full rounded-t-[4px] bg-primary transition-opacity', active !== null && active !== i && 'opacity-45', value === 0 && 'bg-transparent')}
-                        style={{ height: `${Math.max(height, value > 0 ? 1.5 : 0)}%` }}
+                        className={cn('w-full max-w-10 rounded-t-lg rounded-b-[3px] transition-[opacity,filter] group-hover:brightness-110', active !== null && active !== i && 'opacity-45')}
+                        style={{ height: `${Math.max(height, 0)}%`, minHeight: 4, background: i === days.length - 1 ? '#f59e0b' : '#6366f1' }}
                       />
                     </div>
                   );
@@ -133,6 +133,16 @@ export function SalesChart({ days }: { days: readonly DayStats[] }) {
           </div>
         </div>
       )}
+      <div className="flex gap-[18px] text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5">
+          <span className="size-2.5 rounded-[3px] bg-[#6366f1]" />
+          Earlier days
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="size-2.5 rounded-[3px] bg-[#f59e0b]" />
+          Today
+        </span>
+      </div>
     </div>
   );
 }

@@ -9,10 +9,18 @@ export const RESULT_LABEL: Record<ScanResult, string> = {
 };
 
 export const RESULT_STYLE: Record<ScanResult, string> = {
-  valid: 'bg-success/15 text-success',
-  already_used: 'bg-warning/20 text-warning',
-  expired: 'bg-muted text-muted-foreground',
-  invalid: 'bg-destructive/15 text-destructive',
+  valid: 'bg-[#dcfce7] text-[#166534] dark:bg-[#16a34a]/20 dark:text-[#86efac]',
+  already_used: 'bg-[#fef3c7] text-[#92400e] dark:bg-[#d97706]/20 dark:text-[#fcd34d]',
+  expired: 'bg-surface-2 text-muted-foreground',
+  invalid: 'bg-[#ffe4e6] text-[#9f1239] dark:bg-[#e11d48]/20 dark:text-[#fda4af]',
+};
+
+/** The solid tile colour for a result (a row's status tile). */
+export const RESULT_TILE: Record<ScanResult, string> = {
+  valid: '#16a34a',
+  already_used: '#d97706',
+  expired: '#94a3b8',
+  invalid: '#e11d48',
 };
 
 /** One line describing a past scan, from what is stored. */

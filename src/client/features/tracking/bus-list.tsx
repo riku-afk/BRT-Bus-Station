@@ -66,23 +66,23 @@ export function BusList({
                 aria-controls={`bus-details-${bus.busId}`}
                 onClick={() => onSelect?.(open ? null : bus.busId)}
                 className={cn(
-                  "flex w-full items-start justify-between gap-2 rounded border px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent",
-                  open && "border-primary bg-accent",
+                  "flex w-full items-center justify-between gap-3 rounded-[14px] border bg-card p-3 text-left text-sm transition-colors hover:border-[#2563eb]",
+                  open && "border-[#2563eb] bg-[#2563eb]/5",
                 )}
               >
                 <div>
-                  <p className="font-medium">
+                  <p className="font-extrabold">
                     {bus.busName}{" "}
                     <span className="text-xs font-normal text-muted-foreground">
                       {bus.plateNumber}
                     </span>
                     {parked && (
-                      <span className="ml-1.5 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
+                      <span className="ml-1.5 rounded-full bg-[#dcfce7] px-2 py-0.5 text-[11px] font-bold text-[#166534]">
                         Available
                       </span>
                     )}
                     {onRoad && (
-                      <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+                      <span className="ml-1.5 rounded-full bg-[#dbeafe] px-2 py-0.5 text-[11px] font-bold text-[#1e40af]">
                         On the road
                       </span>
                     )}

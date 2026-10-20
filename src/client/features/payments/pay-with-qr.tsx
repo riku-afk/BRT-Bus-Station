@@ -70,11 +70,6 @@ export function PayWithQr({ ticketId, fareCentavos, payBeforeAt, status }: Props
             {/* White card so the code scans in dark mode too. */}
             <img src={src} alt={`QR Ph code to pay ${formatPeso(fareCentavos)}`} width={256} height={256} className="size-64 rounded-md border bg-white p-1" data-testid="pay-qr" />
             <p className="text-2xl font-semibold">{formatPeso(status.amountCentavos ?? fareCentavos)}</p>
-            {status.referenceNo && (
-              <p className="text-xs text-muted-foreground">
-                Reference <span className="font-mono">{status.referenceNo}</span>
-              </p>
-            )}
             <Button asChild variant="outline" size="sm">
               <a href={src} download="pay-qrph.png">
                 <Download /> Download QR (PNG)

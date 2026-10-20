@@ -1,72 +1,107 @@
 /* Limit class detection to src/ so bun.lock and plan/ docs are not scanned. */
 @import 'tailwindcss' source('../..');
 @import 'tw-animate-css';
+@import '@fontsource-variable/plus-jakarta-sans';
 @import 'leaflet/dist/leaflet.css';
 
 @custom-variant dark (&:is(.dark *));
 
-/* BRT palette (placeholder, restyle in the polish phase): deep teal with an amber accent. */
+/* BRT design tokens (design-handoff/tokens.css). Light by default; the .dark class on <html> swaps them. The shadcn names below are aliases of these. */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(0.985 0.004 197);
-  --foreground: oklch(0.22 0.03 215);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.22 0.03 215);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.22 0.03 215);
-  --primary: oklch(0.36 0.06 200);
-  --primary-foreground: oklch(0.98 0.01 197);
-  --secondary: oklch(0.95 0.012 197);
-  --secondary-foreground: oklch(0.26 0.04 210);
-  --muted: oklch(0.955 0.008 197);
-  --muted-foreground: oklch(0.5 0.02 210);
-  --accent: oklch(0.93 0.025 190);
-  --accent-foreground: oklch(0.26 0.04 210);
-  --destructive: oklch(0.58 0.22 27);
-  --success: oklch(0.6 0.14 155);
-  --warning: oklch(0.8 0.15 80);
-  --warning-foreground: oklch(0.3 0.07 60);
-  --border: oklch(0.9 0.012 200);
-  --input: oklch(0.9 0.012 200);
-  --ring: oklch(0.5 0.08 200);
-  --sidebar: oklch(0.27 0.045 205);
-  --sidebar-foreground: oklch(0.93 0.015 197);
-  --sidebar-accent: oklch(0.34 0.05 203);
-  --sidebar-accent-foreground: oklch(0.98 0.01 197);
-  --sidebar-border: oklch(0.34 0.04 205);
+  --bg: #f4f5fb;
+  --surface: #ffffff;
+  --surface-2: #f0f2f8;
+  --border: #e3e6f0;
+  --text: #0f172a;
+  --text-muted: #55607a;
+  --track: #e9ecf5;
+  --navy: #0f172a;
+  --navy-2: #1e293b;
+
+  /* map colours, for the Leaflet markers and keys */
+  --land: #edf1e6;
+  --water: #bcdaf5;
+  --park: #d4e8c9;
+  --road: #ffffff;
+  --label: #5b6577;
+
+  /* section identity */
+  --c-overview: #4f46e5;
+  --c-live: #2563eb;
+  --c-map: #0369a1;
+  --c-stations: #0f766e;
+  --c-buses: #c2410c;
+  --c-konduktors: #7c3aed;
+  --c-konduktors-deep: #5b21b6;
+  --c-fares: #be185d;
+  --c-fares-deep: #9d174d;
+  --c-payments: #15803d;
+  --c-scans: #f59e0b;
+  --c-brand: #facc15;
+
+  /* status */
+  --ok: #16a34a;
+  --moving: #2563eb;
+  --bus: #ea580c;
+  --danger: #e11d48;
+  --danger-deep: #be123c;
+  --expired: #94a3b8;
+
+  --radius-card: 20px;
+  --radius-hero: 22px;
+  --radius-control: 12px;
+
+  /* shadcn names, so the existing components follow the tokens */
+  --radius: 0.75rem;
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --popover: var(--surface);
+  --popover-foreground: var(--text);
+  --primary: var(--c-overview);
+  --primary-foreground: #ffffff;
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--text);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--text-muted);
+  --accent: var(--surface-2);
+  --accent-foreground: var(--text);
+  --destructive: var(--danger);
+  --success: var(--ok);
+  --warning: var(--c-scans);
+  --warning-foreground: #1c1203;
+  --input: #cfd4e4;
+  --ring: var(--c-overview);
+  --sidebar: var(--navy);
+  --sidebar-foreground: #c3cbe0;
+  --sidebar-accent: #ffffff;
+  --sidebar-accent-foreground: var(--navy);
+  --sidebar-border: var(--navy-2);
 }
 
 .dark {
-  --background: oklch(0.17 0.015 215);
-  --foreground: oklch(0.95 0.01 197);
-  --card: oklch(0.21 0.02 213);
-  --card-foreground: oklch(0.95 0.01 197);
-  --popover: oklch(0.21 0.02 213);
-  --popover-foreground: oklch(0.95 0.01 197);
-  --primary: oklch(0.72 0.1 190);
-  --primary-foreground: oklch(0.18 0.03 210);
-  --secondary: oklch(0.27 0.025 210);
-  --secondary-foreground: oklch(0.95 0.01 197);
-  --muted: oklch(0.26 0.02 212);
-  --muted-foreground: oklch(0.7 0.02 205);
-  --accent: oklch(0.3 0.035 200);
-  --accent-foreground: oklch(0.95 0.01 197);
-  --destructive: oklch(0.65 0.2 25);
-  --success: oklch(0.7 0.14 155);
-  --warning: oklch(0.78 0.14 80);
-  --warning-foreground: oklch(0.22 0.05 60);
-  --border: oklch(0.32 0.02 210);
-  --input: oklch(0.32 0.02 210);
-  --ring: oklch(0.6 0.08 195);
-  --sidebar: oklch(0.14 0.015 215);
-  --sidebar-foreground: oklch(0.9 0.015 197);
-  --sidebar-accent: oklch(0.24 0.03 205);
-  --sidebar-accent-foreground: oklch(0.98 0.01 197);
-  --sidebar-border: oklch(0.25 0.02 210);
+  --bg: #0a0f1e;
+  --surface: #121a2e;
+  --surface-2: #1a2340;
+  --border: #243050;
+  --text: #eaeefa;
+  --text-muted: #9ea9c4;
+  --track: #1f2944;
+  --navy: #060a16;
+  --navy-2: #141c33;
+  --land: #18213a;
+  --water: #10284a;
+  --park: #1a3530;
+  --road: #2a3555;
+  --label: #9aa5c2;
+  --primary: #6366f1;
+  --input: #35416a;
+  --ring: #818cf8;
 }
 
 @theme inline {
-  --font-sans: 'Segoe UI', 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-sans: 'Plus Jakarta Sans Variable', 'Plus Jakarta Sans', system-ui, sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -88,6 +123,11 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-track: var(--track);
+  --color-navy: var(--navy);
+  --color-navy-2: var(--navy-2);
   --color-sidebar: var(--sidebar);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
@@ -97,6 +137,8 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: var(--radius-card);
+  --radius-3xl: var(--radius-hero);
 }
 
 /* Auth pages, form side: pale surface with soft diagonal teal bands in the corners. */
@@ -121,57 +163,64 @@
   scrollbar-color: color-mix(in oklch, var(--sidebar-foreground) 20%, transparent) transparent;
 }
 
+/* Leave room for the phone's bottom tab bar and the home indicator. */
+@utility pb-tabbar {
+  padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    font-variant-numeric: tabular-nums;
   }
 }
 
-/* Map markers (Leaflet divIcons) */
+/* Map markers (Leaflet divIcons), as in the design: a white numbered ring per station, an orange disc per bus. */
 .brt-marker {
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   width: 26px;
   height: 26px;
   border-radius: 9999px;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border: 2px solid #fff;
+  background: #ffffff;
+  color: #1e1b4b;
+  border: 3px solid #4f46e5;
   font-size: 11px;
-  font-weight: 600;
-  box-shadow: 0 1px 4px rgb(0 0 0 / 0.4);
+  font-weight: 800;
+  box-shadow: 0 2px 6px rgb(15 23 42 / 0.25);
   cursor: pointer;
   position: relative;
 }
 /* A finger needs about 44 px: the visible circle is 26 px, so the tappable area is widened around it (the pseudo-element is part of the marker). */
-.brt-marker { position: relative; }
 .brt-marker::after { content: ''; position: absolute; inset: -9px; border-radius: 9999px; }
-.brt-marker--origin { background: #16a34a; color: #fff; }
-.brt-marker--destination { background: #dc2626; color: #fff; }
-.brt-marker--inactive { opacity: 0.45; }
+.brt-marker--origin { background: #16a34a; border-color: #ffffff; color: #fff; }
+.brt-marker--destination { background: #e11d48; border-color: #ffffff; color: #fff; }
+.brt-marker--inactive { opacity: 0.45; filter: grayscale(1); }
 
 /* Live bus markers */
 .brt-bus {
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   width: 32px;
   height: 32px;
   border-radius: 9999px;
-  background: #f59e0b;
-  color: #1f2937;
-  border: 2px solid #fff;
-  box-shadow: 0 1px 5px rgb(0 0 0 / 0.5);
+  background: #ea580c;
+  color: #ffffff;
+  border: 3px solid #ffffff;
+  box-shadow: 0 2px 6px rgb(15 23 42 / 0.35);
+  cursor: pointer;
 }
 /* Stopped at a station: a green halo. */
-.brt-bus--dwell { box-shadow: 0 0 0 3px rgb(22 163 74 / 0.7), 0 1px 5px rgb(0 0 0 / 0.5); }
+.brt-bus--dwell { box-shadow: 0 0 0 3px rgb(22 163 74 / 0.7), 0 2px 6px rgb(15 23 42 / 0.35); }
 /* The selected bus (its details are open): a blue ring. */
-.brt-bus--selected { box-shadow: 0 0 0 4px rgb(2 132 199 / 0.85), 0 1px 5px rgb(0 0 0 / 0.5); cursor: pointer; }
-.brt-bus { cursor: pointer; }
+.brt-bus--selected { box-shadow: 0 0 0 5px rgb(37 99 235 / 0.55), 0 2px 6px rgb(15 23 42 / 0.35); }
 
 /* Valid-ticket count on a station marker. */
 .brt-badge {
@@ -180,17 +229,50 @@
   right: -10px;
   min-width: 18px;
   height: 18px;
+  box-sizing: border-box;
   padding: 0 4px;
   border-radius: 9999px;
-  background: #dc2626;
+  background: #e11d48;
   color: #fff;
   border: 2px solid #fff;
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 800;
   line-height: 14px;
   text-align: center;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
 }
 
-/* A station where a bus is waiting (available): a green ring. */
-.brt-marker--has-bus { box-shadow: 0 0 0 3px rgb(22 163 74 / 0.85), 0 1px 4px rgb(0 0 0 / 0.4); }
+/* A station where a bus is waiting (available): a green ring with a soft glow. */
+.brt-marker--has-bus { border-color: #16a34a; box-shadow: 0 0 0 4px rgb(22 163 74 / 0.3), 0 2px 6px rgb(15 23 42 / 0.25); }
+
+/* On/off switch: a checkbox drawn as a pill (design-handoff). Set --sw-on to the section colour. */
+.sw {
+  appearance: none;
+  -webkit-appearance: none;
+  margin: 0;
+  width: 42px;
+  height: 24px;
+  border-radius: 9999px;
+  background: var(--track);
+  border: 1px solid var(--border);
+  box-sizing: border-box;
+  position: relative;
+  cursor: pointer;
+  flex: none;
+  transition: background 0.15s;
+}
+.sw::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #ffffff;
+  transition: left 0.15s;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+}
+.sw:checked { background: var(--sw-on, #4f46e5); border-color: transparent; }
+.sw:checked::after { left: 20px; }
+.sw:focus-visible { outline: 2px solid var(--sw-on, #4f46e5); outline-offset: 2px; }
+.sw:disabled { opacity: 0.5; cursor: default; }

@@ -47,6 +47,21 @@ export type ScanDay = {
 /** A page of a konduktor's scans, newest first, plus the counts per day over the whole window (so day headings do not change by page). */
 export type ScanHistoryPage = Page<ScanHistoryEntry> & { days: ScanDay[] };
 
+/** The passengers on a konduktor's bus since its last completed ride (counted from valid scans; a group ticket counts all its people). */
+export type RideSummary = {
+  passengers: number;
+  /** How many tickets they came on. */
+  tickets: number;
+  /** When the last ride was completed (the count starts after this), or null if none has been. */
+  since: string | null;
+  /** The shelter the bus is waiting at now, or null while it is on the road. */
+  atShelter: string | null;
+  /** The ride can be completed: the bus has arrived at a shelter and there are passengers to clear. */
+  canComplete: boolean;
+};
+
+export type RideCompletion = { passengers: number; tickets: number; completedAt: string };
+
 /** A row of the admin scan log (ADM-04). */
 export type AdminScanEntry = ScanHistoryEntry & { konduktorId: string; konduktorName: string; busId: string | null };
 

@@ -491,6 +491,22 @@ describe('a konduktor\'s history (SCN-06)', () => {
     expect((await kond2.call('GET', '/scans/mine?pageSize=51')).status).toBe(400);
   });
 
+  it('filters the history to the accepted or the refused scans, and the totals follow', async () => {
+    type H = { items: { result: string }[]; total: number; days: { total: number; valid: number }[] };
+    const all = (await kond2.call('GET', '/scans/mine?days=30&pageSize=50')).body.data as H;
+    const valid = (await kond2.call('GET', '/scans/mine?days=30&pageSize=50&result=valid')).body.data as H;
+    const rejected = (await kond2.call('GET', '/scans/mine?days=30&pageSize=50&result=rejected')).body.data as H;
+    expect(valid.items.length).toBeGreaterThan(0);
+    expect(valid.items.every((x) => x.result === 'valid')).toBe(true);
+    expect(rejected.items.length).toBeGreaterThan(0);
+    expect(rejected.items.every((x) => x.result !== 'valid')).toBe(true);
+    expect(valid.total + rejected.total).toBe(all.total);
+    expect(valid.total).toBe(all.days.reduce((n, d) => n + d.valid, 0));
+    // The day counts stay those of the whole window, whichever filter is on.
+    expect(valid.days).toEqual(all.days);
+    expect((await kond2.call('GET', '/scans/mine?result=maybe')).status).toBe(400);
+  });
+
   it('is for konduktors only', async () => {
     expect((await anon().call('GET', '/scans/mine')).status).toBe(401);
     expect((await pax1.call('GET', '/scans/mine')).status).toBe(403);

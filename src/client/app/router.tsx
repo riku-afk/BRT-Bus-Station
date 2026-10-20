@@ -13,6 +13,7 @@ import { AdminPaymentsPage } from '@/pages/admin/admin-payments-page';
 import { AdminLivePage } from '@/pages/admin/admin-live-page';
 import { AdminKonduktorsPage } from '@/pages/admin/admin-konduktors-page';
 import { ScanPage } from '@/pages/konduktor/scan-page';
+import { DispatchPage } from '@/pages/konduktor/dispatch-page';
 import { ScanHistoryPage } from '@/pages/konduktor/scan-history-page';
 import { AdminScansPage } from '@/pages/admin/admin-scans-page';
 import { KonduktorHomePage } from '@/pages/konduktor/konduktor-home-page';
@@ -36,6 +37,7 @@ export function AppRouterProvider() {
           <Route path="tickets" element={<RequireRole roles={['passenger']}><MyTicketsPage /></RequireRole>} />
           <Route path="tickets/:id" element={<RequireRole roles={['passenger']}><TicketPage /></RequireRole>} />
           <Route path="konduktor" element={<RequireRole roles={['konduktor']}><KonduktorHomePage /></RequireRole>} />
+          <Route path="konduktor/dispatch" element={<RequireRole roles={['konduktor']}><DispatchPage /></RequireRole>} />
           <Route path="konduktor/scan" element={<RequireRole roles={['konduktor']}><ScanPage /></RequireRole>} />
           <Route path="konduktor/history" element={<RequireRole roles={['konduktor']}><ScanHistoryPage /></RequireRole>} />
           <Route path="admin" element={<RequireRole roles={['admin']}><AdminHomePage /></RequireRole>} />

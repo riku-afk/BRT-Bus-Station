@@ -59,9 +59,10 @@ describe('the admin dashboard', () => {
     expect((await screen.findByTestId('tile-sales')).textContent).toBe('₱189.00');
     expect(screen.getByTestId('tile-tickets').textContent).toBe('4');
     expect(screen.getByTestId('tile-passengers').textContent).toBe('9');
-    expect(screen.getByTestId('tile-scans').textContent).toBe('6 ok');
+    expect(screen.getByTestId('tile-scans').textContent).toBe('6');
+    expect(screen.getByText('accepted')).toBeTruthy();
     expect(screen.getByText('2 refused')).toBeTruthy();
-    expect(screen.getByText('₱206.00 in 14 days')).toBeTruthy();
+    expect(screen.getByText('₱206.00 in last 14 days')).toBeTruthy();
     expect(requested).toContain('/api/admin/stats?days=14');
   });
 
@@ -84,7 +85,8 @@ describe('the admin dashboard', () => {
     expect(screen.getByTestId('status-used').textContent).toBe('3');
     expect(screen.getByTestId('status-cancelled').textContent).toBe('1');
     const rows = within(screen.getByTestId('top-routes')).getAllByRole('row').slice(1);
-    expect(rows[0]!.textContent).toBe('Bus Shelter S3 → Bus Shelter S203₱147.00');
+    // rank badge, the trip, the share bar (no text), tickets, sales
+    expect(rows[0]!.textContent).toBe('1Bus Shelter S3Bus Shelter S203₱147.00');
     expect(rows).toHaveLength(2);
   });
 

@@ -26,12 +26,13 @@ const ticket = (overrides: Partial<Ticket> = {}): Ticket => ({
 });
 
 /** A fake API: GET /tickets/t-1 returns whatever `current.ticket` is. Every request is recorded. */
-function fakeApi(current: { ticket: Ticket }) {
+function fakeApi(current: { ticket: Ticket }, payment?: Record<string, unknown>) {
   const calls: { method: string; url: string }[] = [];
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
       calls.push({ method: init?.method ?? 'GET', url });
+      if (payment && url.includes('/payment') && !url.includes('.png')) return new Response(JSON.stringify({ success: true, data: payment, timestamp: new Date().toISOString() }), { status: 200 });
       return new Response(JSON.stringify({ success: true, data: current.ticket, timestamp: new Date().toISOString() }), { status: 200 });
     }),
   );
@@ -124,13 +125,26 @@ describe('TicketPage (the return page)', () => {
     expect(calls.every((c) => c.method === 'GET')).toBe(true);
   });
 
-  it('an unpaid ticket opened normally offers Pay now, Cancel and a countdown', async () => {
+  it('with the payment QR on the page there is no Pay now and no countdown, only a red Cancel ticket button', async () => {
+    fakeApi({ ticket: ticket() }, { ticketStatus: 'pending_payment', paymentStatus: 'pending', provider: 'pisopay', amountCentavos: 3500, channelCode: 'QRPH', referenceNo: 'REF-1', hasQr: true });
+    renderPage('/tickets/t-1');
+    expect(await screen.findByTestId('pay-qr')).toBeTruthy();
+    const cancel = screen.getByRole('button', { name: 'Cancel ticket' });
+    expect(cancel.className).toContain('bg-[#e11d48]');
+    expect(screen.queryByRole('button', { name: /Pay now|Pay again/ })).toBeNull();
+    expect(screen.queryByText(/Pay within/)).toBeNull();
+  });
+
+  it('an unpaid ticket opened normally offers Pay now (when there is no payment QR) and Cancel, with no countdown', async () => {
     fakeApi({ ticket: ticket() });
     renderPage('/tickets/t-1');
     expect(await screen.findByRole('button', { name: 'Pay now' })).toBeTruthy();
     expect(screen.getByRole('button', { name: 'Cancel ticket' })).toBeTruthy();
-    expect(screen.getByText(/Pay within/)).toBeTruthy();
+    expect(screen.queryByText(/Pay within/)).toBeNull(); // no countdown in the details
     expect(screen.queryByText('Confirming your payment…')).toBeNull();
+    // The reference code is not shown while the ticket is being paid for.
+    expect(screen.queryByText('BRT-ABC234')).toBeNull();
+    expect(screen.queryByText('Reference')).toBeNull();
   });
 
   it('a paid ticket offers no payment or cancel buttons; an expired one says it can no longer be used', async () => {
@@ -157,7 +171,7 @@ describe('TicketPage (the return page)', () => {
     it('a ticket that is not paid does not offer it', async () => {
       fakeApi({ ticket: ticket() });
       renderPage('/tickets/t-1');
-      await screen.findByText(/Pay within/);
+      await screen.findByRole('button', { name: 'Cancel ticket' });
       expect(screen.queryByRole('button', { name: /Email me this ticket/ })).toBeNull();
     });
   });
@@ -174,7 +188,7 @@ describe('TicketPage (the return page)', () => {
     it('a single ticket shows no passenger line', async () => {
       fakeApi({ ticket: ticket() });
       renderPage('/tickets/t-1');
-      await screen.findByText(/Pay within/);
+      await screen.findByRole('button', { name: 'Cancel ticket' });
       expect(screen.queryByTestId('ticket-passengers')).toBeNull();
       expect(screen.getByText('Fare')).toBeTruthy();
     });
@@ -184,7 +198,7 @@ describe('TicketPage (the return page)', () => {
     it('sends the passenger back to the previous page when the time runs out', async () => {
       fakeApi({ ticket: ticket({ payBeforeAt: new Date(Date.now() + 3000).toISOString() }) });
       renderPage(['/', '/tickets/t-1']);
-      expect(await screen.findByText(/Pay within/)).toBeTruthy();
+      expect(await screen.findByRole('button', { name: 'Cancel ticket' })).toBeTruthy();
       await act(async () => {
         await vi.advanceTimersByTimeAsync(5000);
       });
@@ -194,7 +208,7 @@ describe('TicketPage (the return page)', () => {
     it('goes to the ticket list when the page was opened directly (no previous page)', async () => {
       fakeApi({ ticket: ticket({ payBeforeAt: new Date(Date.now() + 3000).toISOString() }) });
       renderPage('/tickets/t-1');
-      expect(await screen.findByText(/Pay within/)).toBeTruthy();
+      expect(await screen.findByRole('button', { name: 'Cancel ticket' })).toBeTruthy();
       await act(async () => {
         await vi.advanceTimersByTimeAsync(5000);
       });
@@ -205,7 +219,7 @@ describe('TicketPage (the return page)', () => {
       const current = { ticket: ticket() };
       fakeApi(current);
       renderPage(['/', '/tickets/t-1']);
-      expect(await screen.findByText(/Pay within/)).toBeTruthy();
+      expect(await screen.findByRole('button', { name: 'Cancel ticket' })).toBeTruthy();
       current.ticket = ticket({ status: 'expired', payBeforeAt: null });
       await act(async () => {
         await vi.advanceTimersByTimeAsync(4000);

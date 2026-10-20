@@ -1,10 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { AuthCard } from '@/components/layout/auth-card';
 import { errorMessage, useRegister } from '@/features/auth/use-auth';
 
 export function RegisterPage() {
@@ -20,41 +19,42 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="mx-auto max-w-md p-4">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create a passenger account</CardTitle>
-          <CardDescription>Buy tickets and keep them in one place.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={submit} className="flex flex-col gap-3">
-            {register.error && (
-              <Alert className="border-destructive/50 text-destructive">
-                <AlertDescription>{errorMessage(register.error)}</AlertDescription>
-              </Alert>
-            )}
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="fullName">Full name</Label>
-              <Input id="fullName" autoComplete="name" required minLength={2} value={fullName} onChange={(e) => setFullName(e.target.value)} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <Label htmlFor="password">Password</Label>
-              <Input id="password" type="password" autoComplete="new-password" required minLength={8} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} />
-              <p className="text-xs text-muted-foreground">At least 8 characters.</p>
-            </div>
-            <Button type="submit" disabled={register.isPending}>
-              {register.isPending ? 'Creating…' : 'Create account'}
-            </Button>
-            <p className="text-center text-sm text-muted-foreground">
-              Already registered? <Link to="/login" className="text-primary underline">Sign in</Link>
-            </p>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthCard title="Create a passenger account" description="Buy tickets and keep them in one place.">
+      <form onSubmit={submit} className="flex flex-col gap-4">
+        {register.error && (
+          <Alert className="border-destructive/50 text-destructive">
+            <AlertDescription>{errorMessage(register.error)}</AlertDescription>
+          </Alert>
+        )}
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="fullName" className="text-[13px] font-bold">
+            Full name
+          </Label>
+          <Input id="fullName" autoComplete="name" required minLength={2} value={fullName} onChange={(e) => setFullName(e.target.value)} className="h-12" />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="email" className="text-[13px] font-bold">
+            Email
+          </Label>
+          <Input id="email" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="h-12" />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="password" className="text-[13px] font-bold">
+            Password
+          </Label>
+          <Input id="password" type="password" autoComplete="new-password" required minLength={8} maxLength={72} value={password} onChange={(e) => setPassword(e.target.value)} className="h-12" />
+          <p className="text-xs text-muted-foreground">At least 8 characters.</p>
+        </div>
+        <button type="submit" disabled={register.isPending} className="h-[52px] rounded-xl bg-[#be185d] text-[15px] font-extrabold text-white transition hover:brightness-110 disabled:opacity-60">
+          {register.isPending ? 'Creating…' : 'Create account'}
+        </button>
+        <p className="text-center text-sm text-muted-foreground">
+          Already registered?{' '}
+          <Link to="/login" className="font-bold text-[#4f46e5] hover:underline dark:text-[#a5b4fc]">
+            Sign in
+          </Link>
+        </p>
+      </form>
+    </AuthCard>
   );
 }

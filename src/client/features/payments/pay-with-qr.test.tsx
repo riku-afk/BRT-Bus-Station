@@ -24,13 +24,13 @@ const view = (s: PaymentStatus | undefined) =>
 afterEach(cleanup);
 
 describe('PayWithQr', () => {
-  it('shows the QR Ph code with the amount already in it, the reference, and that it is waiting', () => {
+  it('shows the QR Ph code with the amount already in it, no reference, and that it is waiting', () => {
     view(status());
     const img = screen.getByTestId('pay-qr') as HTMLImageElement;
     expect(img.getAttribute('src')).toBe('/api/tickets/t-1/payment-qr.png?ref=REF-ABC');
     expect(img.getAttribute('alt')).toContain('₱33.00');
     expect(screen.getByText('₱33.00')).toBeTruthy();
-    expect(screen.getByText('REF-ABC')).toBeTruthy();
+    expect(screen.queryByText('REF-ABC')).toBeNull(); // the reference is not shown under the payment QR
     expect(screen.getByText(/Waiting for your payment/)).toBeTruthy();
     expect(screen.getByText(/expires in 9:5\d|expires in 10:00/)).toBeTruthy();
     expect(screen.getByRole('link', { name: /Download QR/ }).getAttribute('download')).toBe('pay-qrph.png');

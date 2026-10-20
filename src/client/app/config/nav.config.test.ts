@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { navFor } from './nav.config';
+import { currentNavItem, navFor } from './nav.config';
 
 const links = (role: Parameters<typeof navFor>[0]) => navFor(role).map((i) => i.to);
 
@@ -21,5 +21,27 @@ describe('menus by role', () => {
 
   it('a signed-out visitor has no menu', () => {
     expect(links(null)).toEqual([]);
+  });
+});
+
+describe('the admin menu', () => {
+  it('has an Overview on its own, then Operations and Revenue groups, each section in its own colour', () => {
+    const items = navFor('admin');
+    expect(items.filter((i) => !i.group).map((i) => i.label)).toEqual(['Overview']);
+    expect(items.filter((i) => i.group === 'operations').map((i) => i.label)).toEqual(['Live map', 'Map', 'Stations', 'Buses', 'Konduktors']);
+    expect(items.filter((i) => i.group === 'revenue').map((i) => i.label)).toEqual(['Fares', 'Payments', 'Scans']);
+    expect(items.every((i) => i.tone)).toBe(true);
+    // Amber needs dark ink to stay readable.
+    expect(items.find((i) => i.label === 'Scans')?.ink).toBe('#1c1203');
+  });
+
+  it('finds the entry for the page being shown, longest path first', () => {
+    expect(currentNavItem('admin', '/admin')?.label).toBe('Overview');
+    expect(currentNavItem('admin', '/admin/')?.label).toBe('Overview');
+    expect(currentNavItem('admin', '/admin/buses')?.label).toBe('Buses');
+    expect(currentNavItem('admin', '/admin/buses/anything')?.label).toBe('Buses');
+    expect(currentNavItem('admin', '/')?.label).toBe('Map');
+    expect(currentNavItem('admin', '/nowhere')).toBeUndefined();
+    expect(currentNavItem(null, '/admin')).toBeUndefined();
   });
 });

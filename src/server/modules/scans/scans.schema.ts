@@ -37,7 +37,8 @@ const Entry = z.object({
   quantity: z.number().int().nullable(),
 });
 
-export const HistoryQuery = PageQuery.extend({ days: z.coerce.number().int().min(1).max(30).optional() });
+/** `result`: only the scans that were accepted, only the ones that were refused, or all (the default). */
+export const HistoryQuery = PageQuery.extend({ days: z.coerce.number().int().min(1).max(30).optional(), result: z.enum(['all', 'valid', 'rejected']).optional() });
 
 export const HistoryResponse = z.object({
   success: z.literal(true),
@@ -49,6 +50,18 @@ export const HistoryResponse = z.object({
     totalPages: z.number().int(),
     days: z.array(z.object({ date: z.string(), total: z.number().int(), valid: z.number().int(), rejected: z.number().int() })),
   }),
+  timestamp: z.string(),
+});
+
+export const RideResponse = z.object({
+  success: z.literal(true),
+  data: z.object({ passengers: z.number().int(), tickets: z.number().int(), since: z.string().nullable(), atShelter: z.string().nullable(), canComplete: z.boolean() }),
+  timestamp: z.string(),
+});
+
+export const RideCompletedResponse = z.object({
+  success: z.literal(true),
+  data: z.object({ passengers: z.number().int(), tickets: z.number().int(), completedAt: z.string() }),
   timestamp: z.string(),
 });
 

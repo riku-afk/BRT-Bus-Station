@@ -12,7 +12,7 @@ type Props = {
 export function StationBuses({ stationName, buses }: Props) {
   return (
     <div aria-live="polite" data-testid="station-buses">
-      <p className="mb-1.5 text-sm font-medium">Buses waiting at {stationName}</p>
+      <p className="mb-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">Buses waiting at {stationName}</p>
       {buses.length === 0 ? (
         <p className="text-sm text-muted-foreground">No bus is waiting here right now.</p>
       ) : (
@@ -20,7 +20,7 @@ export function StationBuses({ stationName, buses }: Props) {
           {buses.map((bus) => {
             const departure = describeDeparture(bus.expectedDepartureAt);
             return (
-              <li key={bus.busId} className="flex items-start gap-2 rounded-md border bg-success/5 px-2.5 py-1.5 text-sm">
+              <li key={bus.busId} className="flex items-start gap-2.5 rounded-xl border-2 border-[#16a34a]/50 bg-[#16a34a]/10 px-3 py-2 text-sm">
                 <Bus className="mt-0.5 size-4 text-success" aria-hidden />
                 <div>
                   <p className="font-medium">

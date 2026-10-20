@@ -20,6 +20,7 @@ function renderAs(role: Role | null) {
         <Routes>
           <Route path="/" element={<HomeRoute />} />
           <Route path="/konduktor" element={<div>konduktor page</div>} />
+          <Route path="/login" element={<div>sign in page</div>} />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>,
@@ -38,7 +39,13 @@ describe('HomeRoute', () => {
     expect(screen.queryByText('the all-buses map')).toBeNull();
   });
 
-  it.each([['passenger' as const], ['admin' as const], [null]])('shows the map to %s', async (role) => {
+  it('sends a visitor who is not signed in straight to the sign-in page, not the map', async () => {
+    renderAs(null);
+    expect(await screen.findByText('sign in page')).toBeTruthy();
+    expect(screen.queryByText('the all-buses map')).toBeNull();
+  });
+
+  it.each([['passenger' as const], ['admin' as const]])('shows the map to %s', async (role) => {
     renderAs(role);
     expect(await screen.findByText('the all-buses map')).toBeTruthy();
   });

@@ -21,7 +21,7 @@ const SERVICE_LABEL = {
 export function BusDetails({ bus, eta }: Props) {
   const parked = bus.service === 'parked';
   return (
-    <div className="mt-1 flex flex-col gap-2 rounded-md bg-muted/50 p-3 text-sm" data-testid={`bus-details-${bus.busId}`}>
+    <div className="mt-1 flex flex-col gap-2 rounded-xl bg-surface-2 p-3.5 text-sm" data-testid={`bus-details-${bus.busId}`}>
       <dl className="grid grid-cols-[7rem_1fr] gap-y-1">
         <dt className="text-muted-foreground">Service</dt>
         <dd>{SERVICE_LABEL[bus.service]}</dd>

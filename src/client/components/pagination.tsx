@@ -21,13 +21,13 @@ export function Pagination({ page, onPage, busy, label = 'Pagination' }: Props) 
         Showing {describeRange(page.page, page.pageSize, page.total, page.items.length)}
       </p>
       <div className="flex items-center gap-1.5">
-        <Button variant="outline" size="sm" disabled={busy || page.page <= 1} onClick={() => onPage(page.page - 1)} aria-label="Previous page">
+        <Button variant="outline" size="default" disabled={busy || page.page <= 1} onClick={() => onPage(page.page - 1)} aria-label="Previous page">
           <ChevronLeft /> Previous
         </Button>
-        <span className="px-1 text-xs font-medium tabular-nums">
+        <span className="rounded-full bg-[#4f46e5] px-3 py-1 text-xs font-bold tabular-nums text-white">
           {page.page} / {page.totalPages}
         </span>
-        <Button variant="outline" size="sm" disabled={busy || page.page >= page.totalPages} onClick={() => onPage(page.page + 1)} aria-label="Next page">
+        <Button variant="outline" size="default" disabled={busy || page.page >= page.totalPages} onClick={() => onPage(page.page + 1)} aria-label="Next page">
           Next <ChevronRight />
         </Button>
       </div>

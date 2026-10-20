@@ -18,7 +18,7 @@ const db = () => ctx.db.getDb();
 const st: string[] = [];
 const ids: Record<string, string> = {};
 
-const tick = () => new Promise((r) => setTimeout(r, 60)); // the email is sent in the background, just after the payment
+const tick = () => new Promise((r) => setTimeout(r, 400)); // the email is sent in the background, just after the payment (QR rendering: give a busy machine time)
 const newTicket = async (body: Record<string, unknown> = { originId: st[0], destinationId: st[1] }) => (await pax.call('POST', '/tickets', body)).body.data as { id: string };
 const pay = async (ticketId: string) => {
   const checkout = (await pax.call('POST', `/tickets/${ticketId}/checkout`)).body.data as { checkoutUrl: string };

@@ -21,13 +21,15 @@ import { clampPage, offsetOf, toPage, type Page } from '@shared/pagination';
 import {
   scanMessage,
   type AdminScanEntry,
+  type RideCompletion,
+  type RideSummary,
   type ScanHistoryPage,
   type ScanHistoryEntry,
   type ScanReason,
   type ScanResponse,
   type ScanResult,
 } from '@shared/scans/models';
-import { scansRepository } from './scans.repository';
+import { scansRepository, type HistoryResult } from './scans.repository';
 import type { AdminScanRow, ScannedTicket, ScanRow, ScannerRow } from './scans.types';
 
 const toEntry = (row: ScanRow): ScanHistoryEntry => ({
@@ -104,19 +106,52 @@ export const scansService = {
 
   /** My scans for the last `days` days grouped by Manila day, today first, with a count per day (SCN-06). Only mine. */
   /** One page of this konduktor's scans (newest first), and the per-day counts of the whole window. */
-  async history(userId: string, query: { days?: number; page: number; pageSize: number }): Promise<ScanHistoryPage> {
+  async history(userId: string, query: { days?: number; result?: HistoryResult; page: number; pageSize: number }): Promise<ScanHistoryPage> {
     const db = getDb();
     const scanner = await scansRepository.findScanner(db, userId);
     if (!scanner) throw ApiError.forbidden('Only konduktors have a scan history');
     const days = query.days ?? 14;
     const summary = await scansRepository.daySummaryForKonduktor(db, scanner.konduktor_id, days);
-    const total = summary.reduce((n, d) => n + d.total, 0);
+    const result = query.result ?? 'all';
+    const total = summary.reduce((n, d) => n + (result === 'valid' ? d.valid : result === 'rejected' ? d.total - d.valid : d.total), 0);
     const page = clampPage(query.page, total, query.pageSize);
-    const rows = await scansRepository.listForKonduktor(db, scanner.konduktor_id, days, { limit: query.pageSize, offset: offsetOf(page, query.pageSize) });
+    const rows = await scansRepository.listForKonduktor(db, scanner.konduktor_id, days, { limit: query.pageSize, offset: offsetOf(page, query.pageSize), result });
     return {
       ...toPage(rows.map(toEntry), total, page, query.pageSize),
       days: summary.map((d) => ({ date: d.date, total: d.total, valid: d.valid, rejected: d.total - d.valid })),
     };
+  },
+
+  /** How many passengers are on this konduktor's bus now, and whether the ride can be completed. */
+  async ride(userId: string): Promise<RideSummary> {
+    const db = getDb();
+    const scanner = await scansRepository.findScanner(db, userId);
+    if (!scanner) throw ApiError.forbidden('Only konduktors have a ride');
+    if (!scanner.bus_id) return { passengers: 0, tickets: 0, since: null, atShelter: null, canComplete: false };
+    const [summary, shelter] = await Promise.all([scansRepository.rideSummary(db, scanner.bus_id), scansRepository.busShelter(db, scanner.bus_id)]);
+    return {
+      passengers: summary.passengers,
+      tickets: summary.tickets,
+      since: summary.since ? summary.since.toISOString() : null,
+      atShelter: shelter?.name ?? null,
+      canComplete: shelter !== null && summary.passengers > 0,
+    };
+  },
+
+  /** The bus has reached its destination: mark the ride complete, and the passenger count starts again from zero. */
+  async completeRide(userId: string): Promise<RideCompletion> {
+    const scanner = await scansRepository.findScanner(getDb(), userId);
+    if (!scanner) throw ApiError.forbidden('Only konduktors can complete a ride');
+    if (!scanner.bus_id) throw ApiError.conflict('You have no bus assigned');
+    return transaction(async (tx) => {
+      // Same rule as scanning: the bus must be waiting at a shelter (it has arrived), and this holds it there while the ride is closed.
+      const shelter = await scansRepository.busShelter(tx, scanner.bus_id);
+      if (!shelter) throw ApiError.conflict('Your bus is still on the road. You can complete the ride when it arrives.');
+      const summary = await scansRepository.rideSummary(tx, scanner.bus_id!);
+      if (summary.passengers === 0) throw ApiError.conflict('There are no passengers on board to clear.');
+      const done = await scansRepository.completeRide(tx, scanner.bus_id!, scanner.konduktor_id);
+      return { passengers: done.passengers, tickets: done.tickets, completedAt: done.completed_at.toISOString() };
+    });
   },
 
   /** The admin scan log (ADM-04). */

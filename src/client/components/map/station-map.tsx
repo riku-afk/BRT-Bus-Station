@@ -40,7 +40,22 @@ type Props = {
   className?: string;
 };
 
-type BusEntry = { marker: L.Marker; tween: Tween; lastUpdateAt: number; atStation: boolean; selected: boolean };
+type BusEntry = { marker: L.Marker; tween: Tween; lastUpdateAt: number; atStation: boolean; selected: boolean; dx: number };
+
+/** Buses waiting at the same shelter sit side by side, not on top of one another: this is how far (px) each is shifted sideways. */
+const SLOT_PX = 36;
+
+function waitingOffsets(buses: readonly BusPosition[]): Map<string, number> {
+  const groups = new Map<string, string[]>();
+  for (const b of buses) {
+    if (!b.atStation) continue;
+    const key = `${b.latitude.toFixed(5)},${b.longitude.toFixed(5)}`;
+    groups.set(key, [...(groups.get(key) ?? []), b.busId]);
+  }
+  const offsets = new Map<string, number>();
+  for (const ids of groups.values()) ids.sort().forEach((id, i) => offsets.set(id, (i - (ids.length - 1) / 2) * SLOT_PX));
+  return offsets;
+}
 
 // Cavite, used until the first stations arrive.
 const DEFAULT_CENTER: L.LatLngExpression = [14.39, 120.9];
@@ -68,12 +83,12 @@ const BUS_SVG =
  * A bus stopped at a shelter is drawn just ABOVE the shelter's marker, not on top of it: the bus is bigger than the marker, so
  * sitting on it would hide it and swallow the tap meant for the shelter. Tap the bus for the bus, the numbered circle for the shelter.
  */
-function busIcon(atStation: boolean, selected: boolean) {
+function busIcon(atStation: boolean, selected: boolean, dx = 0) {
   return L.divIcon({
     className: '',
     html: `<div class="brt-bus${atStation ? ' brt-bus--dwell' : ''}${selected ? ' brt-bus--selected' : ''}">${BUS_SVG}</div>`,
     iconSize: [32, 32],
-    iconAnchor: [16, atStation ? 50 : 16],
+    iconAnchor: [16 - dx, atStation ? 50 : 16],
   });
 }
 
@@ -81,7 +96,7 @@ function busIcon(atStation: boolean, selected: boolean) {
 function applySelection(entry: BusEntry, selected: boolean) {
   if (entry.selected === selected) return;
   entry.selected = selected;
-  entry.marker.setIcon(busIcon(entry.atStation, selected));
+  entry.marker.setIcon(busIcon(entry.atStation, selected, entry.dx));
 }
 
 function busLabel(bus: BusPosition) {
@@ -180,7 +195,10 @@ export function StationMap({
     // The road buses drive, when it is known for exactly these shelters; otherwise the shelters joined by straight lines.
     const road = path && path.stationDistances.length === active.length ? path : null;
     const line: L.LatLngTuple[] = road ? road.points.map((p): L.LatLngTuple => [p.latitude, p.longitude]) : active.map((s): L.LatLngTuple => [s.latitude, s.longitude]);
-    if (line.length > 1) L.polyline(line, { color: '#0284c7', weight: 5, opacity: 0.9, lineJoin: 'round' }).addTo(layer);
+    if (line.length > 1) {
+      L.polyline(line, { color: '#ffffff', weight: 11, opacity: 0.95, lineJoin: 'round', interactive: false }).addTo(layer);
+      L.polyline(line, { color: '#4f46e5', weight: 6, opacity: 1, lineJoin: 'round', interactive: false }).addTo(layer);
+    }
 
     const origin = stations.find((s) => s.id === originId);
     const destination = stations.find((s) => s.id === destinationId);
@@ -232,6 +250,7 @@ export function StationMap({
     const entries = busEntries.current;
     const now = performance.now();
     const seen = new Set<string>();
+    const offsets = waitingOffsets(buses ?? []);
 
     for (const bus of buses ?? []) {
       seen.add(bus.busId);
@@ -239,20 +258,22 @@ export function StationMap({
       const existing = entries.get(bus.busId);
       if (!existing) {
         const selected = selectedRef.current === bus.busId;
-        const marker = L.marker([target.latitude, target.longitude], { icon: busIcon(bus.atStation, selected), zIndexOffset: 1000, keyboard: false });
+        const marker = L.marker([target.latitude, target.longitude], { icon: busIcon(bus.atStation, selected, offsets.get(bus.busId) ?? 0), zIndexOffset: 1000, keyboard: false });
         marker.bindTooltip(busLabel(bus), { direction: 'top', offset: [0, -14] });
         marker.on('click', () => handlers.current.onBusClick?.(bus.busId));
         marker.addTo(busLayer);
-        entries.set(bus.busId, { marker, tween: { from: target, to: target, startedAt: now, duration: 0 }, lastUpdateAt: now, atStation: bus.atStation, selected });
+        entries.set(bus.busId, { marker, tween: { from: target, to: target, startedAt: now, duration: 0 }, lastUpdateAt: now, atStation: bus.atStation, selected, dx: offsets.get(bus.busId) ?? 0 });
         continue;
       }
       const here = existing.marker.getLatLng();
       existing.tween = nextTween({ latitude: here.lat, longitude: here.lng }, target, existing.lastUpdateAt, now);
       existing.lastUpdateAt = now;
       existing.marker.setTooltipContent(busLabel(bus));
-      if (existing.atStation !== bus.atStation) {
-        existing.marker.setIcon(busIcon(bus.atStation, existing.selected));
+      const dx = offsets.get(bus.busId) ?? 0;
+      if (existing.atStation !== bus.atStation || existing.dx !== dx) {
         existing.atStation = bus.atStation;
+        existing.dx = dx;
+        existing.marker.setIcon(busIcon(bus.atStation, existing.selected, dx));
       }
     }
     for (const [id, entry] of entries) {

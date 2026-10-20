@@ -11,6 +11,9 @@ const HISTORY_SELECT = `
     LEFT JOIN stations sd ON sd.id = t.destination_station_id
     LEFT JOIN buses b ON b.id = s.bus_id`;
 
+/** Which of a konduktor's own scans to list: the accepted ones, the refused ones, or all. */
+export type HistoryResult = 'all' | 'valid' | 'rejected';
+
 type AdminFilter = { konduktorId?: string; busId?: string; date?: string; result?: ScanResult };
 
 const ADMIN_WHERE = `
@@ -80,6 +83,35 @@ export const scansRepository = {
     return rows[0] ?? null;
   },
 
+  /** The passengers of the valid scans on a bus since its last completed ride. */
+  async rideSummary(db: SQLExecutor, busId: string): Promise<{ passengers: number; tickets: number; since: Date | null }> {
+    const rows = await db.query<{ passengers: number; tickets: number; since: Date | null }>(
+      `SELECT COALESCE(SUM(t.quantity), 0)::int AS passengers, count(*)::int AS tickets,
+              (SELECT max(completed_at) FROM ride_completions WHERE bus_id = $1) AS since
+         FROM scans s
+         JOIN tickets t ON t.id = s.ticket_id
+        WHERE s.bus_id = $1 AND s.result = 'valid'
+          AND s.scanned_at > COALESCE((SELECT max(completed_at) FROM ride_completions WHERE bus_id = $1), '-infinity'::timestamptz)`,
+      [busId],
+    );
+    return rows[0]!;
+  },
+
+  /** Completes the ride: records how many were on board and starts the next count from zero. One statement, so the count and the mark agree. */
+  async completeRide(db: SQLExecutor, busId: string, konduktorId: string): Promise<{ passengers: number; tickets: number; completed_at: Date }> {
+    const rows = await db.query<{ passengers: number; tickets: number; completed_at: Date }>(
+      `INSERT INTO ride_completions (bus_id, konduktor_id, passengers, tickets)
+       SELECT $1, $2, COALESCE(SUM(t.quantity), 0)::int, count(*)::int
+         FROM scans s
+         JOIN tickets t ON t.id = s.ticket_id
+        WHERE s.bus_id = $1 AND s.result = 'valid'
+          AND s.scanned_at > COALESCE((SELECT max(completed_at) FROM ride_completions WHERE bus_id = $1), '-infinity'::timestamptz)
+       RETURNING passengers, tickets, completed_at`,
+      [busId, konduktorId],
+    );
+    return rows[0]!;
+  },
+
   /** The only write to `scans`. Returns the stored time, so the response and the log agree. */
   async insert(
     db: SQLExecutor,
@@ -93,13 +125,14 @@ export const scansRepository = {
   },
 
   /** One page of a konduktor's own scans, newest first (SCN-06). */
-  listForKonduktor(db: SQLExecutor, konduktorId: string, days: number, opts: { limit: number; offset: number }): Promise<ScanRow[]> {
+  listForKonduktor(db: SQLExecutor, konduktorId: string, days: number, opts: { limit: number; offset: number; result?: HistoryResult }): Promise<ScanRow[]> {
     return db.query<ScanRow>(
       `${HISTORY_SELECT}
         WHERE s.konduktor_id = $1 AND s.scanned_at >= now() - make_interval(days => $2::int)
+          AND ($5::text = 'all' OR ($5 = 'valid' AND s.result = 'valid') OR ($5 = 'rejected' AND s.result <> 'valid'))
         ORDER BY s.scanned_at DESC, s.id
         LIMIT $3 OFFSET $4`,
-      [konduktorId, days, opts.limit, opts.offset],
+      [konduktorId, days, opts.limit, opts.offset, opts.result ?? 'all'],
     );
   },
 

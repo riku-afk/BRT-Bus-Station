@@ -45,7 +45,7 @@ describe('ScanResultScreen', () => {
 
   it('is red with the reason for a ticket that was already used', () => {
     render(<ScanResultScreen result={{ ...base, result: 'already_used', message: 'Already used at 8:42 AM' }} onNext={() => {}} />);
-    expect(screen.getByTestId('scan-result').className).toMatch(/bg-red/);
+    expect(screen.getByTestId('scan-result').className).toMatch(/bg-amber/);
     expect(screen.getByText('ALREADY USED')).toBeTruthy();
     expect(screen.getByText('Already used at 8:42 AM')).toBeTruthy();
     expect(screen.queryByText('Passenger gets off at')).toBeNull();
@@ -63,7 +63,7 @@ describe('ScanResultScreen', () => {
     render(<ScanResultScreen result={wrong} onNext={() => {}} />);
     expect(screen.getByText('WRONG SHELTER')).toBeTruthy();
     expect(screen.getByText(/this ticket boards at Bus Shelter S3/)).toBeTruthy();
-    expect(screen.getByTestId('scan-result').className).toMatch(/bg-red/);
+    expect(screen.getByTestId('scan-result').className).toMatch(/bg-rose/);
     expect(screen.queryByText('Passenger gets off at')).toBeNull();
   });
 

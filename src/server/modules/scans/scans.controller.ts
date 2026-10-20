@@ -4,7 +4,7 @@ import { pageParams } from '@lib/pagination';
 import { apiResponse } from '@lib/response';
 import { HISTORY_PAGE_SIZE } from '@shared/pagination';
 import { authorize } from '@middleware/auth.middleware';
-import { AdminQuery, AdminResponse, HistoryQuery, HistoryResponse, ScanBody, ScanResponse } from './scans.schema';
+import { AdminQuery, AdminResponse, HistoryQuery, HistoryResponse, RideCompletedResponse, RideResponse, ScanBody, ScanResponse } from './scans.schema';
 import { scansService } from './scans.service';
 
 const json = <T extends object>(schema: T) => ({ content: { 'application/json': { schema } } });
@@ -30,6 +30,24 @@ const historyRoute = createRoute({
   responses: { 200: { description: 'History', ...json(HistoryResponse) } },
 });
 
+const rideRoute = createRoute({
+  method: 'get',
+  path: '/scans/ride',
+  tags: ['Scans'],
+  summary: 'The passengers on my bus since its last completed ride, and whether the ride can be completed (konduktor)',
+  security,
+  responses: { 200: { description: 'Ride', ...json(RideResponse) } },
+});
+
+const completeRideRoute = createRoute({
+  method: 'post',
+  path: '/scans/ride/complete',
+  tags: ['Scans'],
+  summary: 'The bus has arrived: complete the ride, and the passenger count starts again from zero (konduktor)',
+  security,
+  responses: { 200: { description: 'Ride completed', ...json(RideCompletedResponse) } },
+});
+
 const adminRoute = createRoute({
   method: 'get',
   path: '/scans',
@@ -50,7 +68,15 @@ export const scansController = createOpenAPIApp()
   .openapi(historyRoute, async (c) => {
     const auth = authorize(c, 'konduktor');
     const q = c.req.valid('query');
-    return c.json(apiResponse(await scansService.history(auth.user.id, { days: q.days, ...pageParams(q, HISTORY_PAGE_SIZE) })), 200);
+    return c.json(apiResponse(await scansService.history(auth.user.id, { days: q.days, result: q.result, ...pageParams(q, HISTORY_PAGE_SIZE) })), 200);
+  })
+  .openapi(rideRoute, async (c) => {
+    const auth = authorize(c, 'konduktor');
+    return c.json(apiResponse(await scansService.ride(auth.user.id)), 200);
+  })
+  .openapi(completeRideRoute, async (c) => {
+    const auth = authorize(c, 'konduktor');
+    return c.json(apiResponse(await scansService.completeRide(auth.user.id)), 200);
   })
   .openapi(adminRoute, async (c) => {
     authorize(c, 'admin');
