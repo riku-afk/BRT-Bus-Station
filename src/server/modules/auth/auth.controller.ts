@@ -19,7 +19,7 @@ const cookieOptions = () => ({
   path: '/',
 });
 
-async function startSession(c: Context<AppEnv>, userId: string) {
+export async function startSession(c: Context<AppEnv>, userId: string) {
   const token = await authService.issueSessionToken(userId);
   setCookie(c, SESSION_COOKIE, token, { ...cookieOptions(), maxAge: env.session.ttlHours * 3600 });
 }

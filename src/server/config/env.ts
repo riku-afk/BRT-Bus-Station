@@ -21,6 +21,16 @@ const schema = z.object({
   SESSION_TTL_HOURS: z.coerce.number().int().positive().default(12),
   QR_SIGNING_SECRET: z.string().min(32).default('dev-only-qr-signing-secret-change-me-0123456789'),
 
+  // Single sign-on from the partner system (the Smart City app). Off unless SSO_ENABLED=true. The partner signs short-lived HS256 tokens
+  // with this shared secret (at least 32 characters; never in the mobile app). See plan/sso.md.
+  SSO_ENABLED: z.enum(['true', 'false']).default('false'),
+  SSO_SHARED_SECRET: z.string().min(32).optional(),
+  SSO_ISSUER: z.string().min(1).default('sce'),
+  // The hand-off token (browser) and the server-to-server token (ticket list) have different audiences, so one cannot be used as the other.
+  SSO_AUDIENCE: z.string().min(1).default('brt'),
+  SSO_API_AUDIENCE: z.string().min(1).default('brt-api'),
+  // A token older than this is refused even if its own expiry is later.
+  SSO_MAX_TOKEN_AGE_SECONDS: z.coerce.number().int().min(10).max(600).default(120),
   TICKET_PENDING_TTL_MINUTES: z.coerce.number().int().positive().default(15),
   // How often the expiry worker looks for unpaid / lapsed tickets.
   TICKET_EXPIRY_INTERVAL_SECONDS: z.coerce.number().int().min(5).default(30),
@@ -71,6 +81,10 @@ if (e.MAIL_PROVIDER === 'smtp' && !e.SMTP_HOST) {
   throw new Error('MAIL_PROVIDER=smtp needs SMTP_HOST (and usually SMTP_USER / SMTP_PASSWORD).');
 }
 
+if (e.SSO_ENABLED === 'true' && !e.SSO_SHARED_SECRET) {
+  throw new Error('SSO_ENABLED=true needs SSO_SHARED_SECRET (at least 32 characters).');
+}
+
 if (e.PAYMENT_PROVIDER === 'pisopay' && (!e.PISOPAY_API_USERNAME || !e.PISOPAY_API_PASSWORD)) {
   throw new Error('PAYMENT_PROVIDER=pisopay needs PISOPAY_API_USERNAME and PISOPAY_API_PASSWORD.');
 }
@@ -78,6 +92,7 @@ if (e.PAYMENT_PROVIDER === 'pisopay' && (!e.PISOPAY_API_USERNAME || !e.PISOPAY_A
 if (e.APP_ENV === 'prod') {
   const defaults = [e.SESSION_SECRET, e.QR_SIGNING_SECRET].some((s) => s.startsWith('dev-only'));
   if (defaults) throw new Error('Refusing to start in prod with development secrets.');
+  if (e.SSO_ENABLED === 'true' && e.SSO_SHARED_SECRET?.startsWith('dev-only')) throw new Error('Refusing to start in prod with a development SSO secret.');
   // The mock gateway lets anyone with a checkout link "pay": it must never run in production.
   if (e.PAYMENT_PROVIDER === 'mock') throw new Error('Refusing to start in prod with PAYMENT_PROVIDER=mock.');
 }
@@ -92,6 +107,14 @@ export const env = {
   database: { url: e.DATABASE_URL, poolMax: e.DATABASE_POOL_MAX },
   session: { secret: e.SESSION_SECRET, ttlHours: e.SESSION_TTL_HOURS },
   qr: { signingSecret: e.QR_SIGNING_SECRET },
+  sso: {
+    enabled: e.SSO_ENABLED === 'true',
+    secret: e.SSO_SHARED_SECRET ?? '',
+    issuer: e.SSO_ISSUER,
+    audience: e.SSO_AUDIENCE,
+    apiAudience: e.SSO_API_AUDIENCE,
+    maxTokenAgeSeconds: e.SSO_MAX_TOKEN_AGE_SECONDS,
+  },
   tickets: { pendingTtlMinutes: e.TICKET_PENDING_TTL_MINUTES, expiryIntervalSeconds: e.TICKET_EXPIRY_INTERVAL_SECONDS },
   payment: {
     provider: e.PAYMENT_PROVIDER,

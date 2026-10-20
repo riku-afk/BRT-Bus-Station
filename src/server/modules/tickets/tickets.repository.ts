@@ -21,6 +21,24 @@ export const ticketsRepository = {
     return rows[0] ?? null;
   },
 
+  /** One page of a passenger's tickets, newest first. `statuses` null = every status. */
+  listPageByPassenger(db: SQLExecutor, passengerId: string, statuses: readonly string[] | null, opts: { limit: number; offset: number; since?: Date | null }): Promise<TicketRow[]> {
+    return db.query<TicketRow>(
+      `${SELECT} WHERE t.passenger_id = $1 AND ($2::text[] IS NULL OR t.status = ANY($2)) AND ($5::timestamptz IS NULL OR t.created_at >= $5)
+        ORDER BY t.created_at DESC, t.id LIMIT $3 OFFSET $4`,
+      [passengerId, statuses, opts.limit, opts.offset, opts.since ?? null],
+    );
+  },
+
+  /** How many tickets a passenger has in each status, in all and bought since `since`. */
+  async countByStatus(db: SQLExecutor, passengerId: string, since: Date): Promise<Record<string, { all: number; recent: number }>> {
+    const rows = await db.query<{ status: string; n: number; recent: number }>(
+      'SELECT status, count(*)::int AS n, (count(*) FILTER (WHERE created_at >= $2))::int AS recent FROM tickets WHERE passenger_id = $1 GROUP BY status',
+      [passengerId, since],
+    );
+    return Object.fromEntries(rows.map((r) => [r.status, { all: r.n, recent: r.recent }]));
+  },
+
   listByPassenger(db: SQLExecutor, passengerId: string, limit: number): Promise<TicketRow[]> {
     return db.query<TicketRow>(`${SELECT} WHERE t.passenger_id = $1 ORDER BY t.created_at DESC LIMIT $2`, [passengerId, limit]);
   },

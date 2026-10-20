@@ -11,7 +11,8 @@ import { stationsRepository } from '@modules/stations/stations.repository';
 import { headingToId } from '@shared/tracking/stations';
 import { paymentsRepository } from '@modules/payments/payments.repository';
 import { endOfManilaDay } from '@shared/datetime/ph-time';
-import { MAX_PENDING_TICKETS_PER_PASSENGER, TICKET_STATUS_LABEL } from '@shared/tickets/status';
+import { clampPage, offsetOf, toPage } from '@shared/pagination';
+import { MAX_PENDING_TICKETS_PER_PASSENGER, TICKET_FILTERS, TICKET_STATUS_LABEL, TICKET_TRANSACTIONS_DAYS, type TicketFilter } from '@shared/tickets/status';
 import { ticketsRepository } from './tickets.repository';
 import type { TicketRow, TicketView } from './tickets.types';
 
@@ -136,6 +137,33 @@ export const ticketsService = {
     // A failed attempt does not count against the limit: they can try again straight away.
     if (!sent) lastEmailed.delete(ticketId);
     return { sent };
+  },
+
+  /**
+   * One page of a passenger's tickets for a list screen, with how many there are under each filter (All / To pay / Ready to ride /
+   * Past), so the tabs can show their counts. The filter is the server's: nobody pulls the whole list.
+   */
+  async listPage(passengerId: string, query: { filter: TicketFilter; page: number; pageSize: number }) {
+    const db = getDb();
+    // Transactions are only the recent ones: finished tickets bought in the last week. The other filters have no time limit.
+    const since = new Date(Date.now() - TICKET_TRANSACTIONS_DAYS * 86_400_000);
+    const byStatus = await ticketsRepository.countByStatus(db, passengerId, since);
+    const sum = (statuses: readonly string[], field: 'all' | 'recent') => statuses.reduce((n, s) => n + (byStatus[s]?.[field] ?? 0), 0);
+    const counts = Object.fromEntries(
+      (Object.keys(TICKET_FILTERS) as TicketFilter[]).map((f) => {
+        const statuses = TICKET_FILTERS[f];
+        if (!statuses) return [f, Object.values(byStatus).reduce((a, b) => a + b.all, 0)];
+        return [f, sum(statuses, f === 'transactions' ? 'recent' : 'all')];
+      }),
+    ) as Record<TicketFilter, number>;
+    const total = counts[query.filter];
+    const page = clampPage(query.page, total, query.pageSize);
+    const rows = await ticketsRepository.listPageByPassenger(db, passengerId, TICKET_FILTERS[query.filter], {
+      limit: query.pageSize,
+      offset: offsetOf(page, query.pageSize),
+      since: query.filter === 'transactions' ? since : null,
+    });
+    return { ...toPage(rows.map(toTicketView), total, page, query.pageSize), counts };
   },
 
   async listMine(passengerId: string): Promise<TicketView[]> {

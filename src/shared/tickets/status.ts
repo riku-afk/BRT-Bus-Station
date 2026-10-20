@@ -37,3 +37,19 @@ export const TICKET_STATUS_LABEL: Readonly<Record<TicketStatus, string>> = {
 
 /** Most tickets one passenger may have waiting for payment at once. */
 export const MAX_PENDING_TICKETS_PER_PASSENGER = 5;
+
+/** The groups a list of tickets is filtered by (the tabs of a ticket list). */
+export const TICKET_FILTER_KEYS = ['all', 'pay', 'ready', 'transactions'] as const;
+export type TicketFilter = (typeof TICKET_FILTER_KEYS)[number];
+
+/** Which statuses each filter shows; null = all of them. */
+export const TICKET_FILTERS: Record<TicketFilter, readonly TicketStatus[] | null> = {
+  all: null,
+  pay: ['pending_payment'],
+  ready: ['paid'],
+  // Finished tickets (used, expired, cancelled), but only the recent ones: see TICKET_TRANSACTIONS_DAYS.
+  transactions: ['used', 'expired', 'cancelled'],
+};
+
+/** The Transactions filter only lists tickets bought in the last this many days. */
+export const TICKET_TRANSACTIONS_DAYS = 7;

@@ -30,6 +30,11 @@ export function LoginPage() {
   return (
     <AuthCard title="Sign in" description="Passengers, konduktors and admins sign in here.">
       <form onSubmit={submit} className="flex flex-col gap-4">
+        {new URLSearchParams(location.search).get('sso') === 'failed' && (
+          <Alert className="border-warning/60">
+            <AlertDescription>That sign-in link has expired or was already used. Go back to the app and open Tickets again.</AlertDescription>
+          </Alert>
+        )}
         {login.error && (
           <Alert className="border-destructive/50 text-destructive">
             <AlertDescription>{errorMessage(login.error)}</AlertDescription>

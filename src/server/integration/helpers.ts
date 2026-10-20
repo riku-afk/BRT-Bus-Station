@@ -15,6 +15,9 @@ export function testDatabaseUrl(): string {
   return base.toString();
 }
 
+/** The shared secret the test app trusts for SSO tokens. */
+export const TEST_SSO_SECRET = 'test-sso-shared-secret-0123456789abcdef';
+
 export async function setupTestApp() {
   const url = testDatabaseUrl();
   const admin = new URL(url);
@@ -48,6 +51,9 @@ export async function setupTestApp() {
   process.env.ROUTING_PROVIDER = 'none';
   // Nothing is ever really emailed from a test.
   process.env.MAIL_PROVIDER = 'console';
+  // Single sign-on is on in tests, with a known secret (src/server/integration/sso.integration.test.ts signs tokens with it).
+  process.env.SSO_ENABLED = 'true';
+  process.env.SSO_SHARED_SECRET = TEST_SSO_SECRET;
   delete process.env.PISOPAY_API_USERNAME;
   delete process.env.PISOPAY_API_PASSWORD;
   process.env.PISOPAY_BASE_URL = 'https://api-checkout.pisopay.test';

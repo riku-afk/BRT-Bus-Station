@@ -23,6 +23,7 @@ import { trackingController } from '@modules/tracking';
 import { ticketsController } from '@modules/tickets';
 import { paymentsController } from '@modules/payments';
 import { scansController } from '@modules/scans';
+import { ssoController } from '@modules/sso';
 
 export const api = createOpenAPIApp();
 
@@ -46,6 +47,7 @@ api.route('/', statsController);
 api.route('/', ticketsController);
 api.route('/', paymentsController);
 api.route('/', scansController);
+api.route('/', ssoController);
 
 // ── API documentation ────────────────────────────────────────────────────────
 mountApiDocs(api);
