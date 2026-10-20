@@ -1,0 +1,82 @@
+# BRT Bus Station on this PC, for trying it on a phone (the Android app, or a browser) on the same Wi-Fi.
+#
+#   $env:BRT_HOST_IP = "10.10.0.4"        # this PC's address on the Wi-Fi the phone uses (ipconfig)
+#   docker compose -f docker-compose.demo.yml up --build -d
+#
+# The app is then at http://<BRT_HOST_IP>:8080 (port: BRT_PORT). It starts from an empty database with the demo accounts
+# (password Demo1234!), takes payments through PisoPay (credentials from .env) and uses the simulator for the buses.
+# Not for production: APP_ENV=demo, plain http, development secrets. See plan/docker-local.md.
+name: brt
+
+x-app: &app
+  build: .
+  image: brt-bus-station:local
+  environment: &env
+    APP_ENV: demo
+    NODE_ENV: production
+    APP_BASE_URL: http://${BRT_HOST_IP:-localhost}:${BRT_PORT:-8080}
+    # The Android emulator (and a phone on a USB cable) reaches the app as localhost through `adb reverse`.
+    APP_EXTRA_ORIGINS: http://localhost:${BRT_PORT:-8080}
+    DATABASE_URL: postgres://postgres:password@db:5432/brt_bus_station
+    # Payments: PisoPay (QR Ph), with the credentials from .env (PAYMENT_PROVIDER, PISOPAY_*). Set PAYMENT_PROVIDER=mock there for the offline demo gateway.
+    PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-pisopay}
+    PAYMENT_WEBHOOK_SECRET: ${PAYMENT_WEBHOOK_SECRET:-dev-only-webhook-secret}
+    PISOPAY_BASE_URL: ${PISOPAY_BASE_URL:-https://api-checkout.pisopay.com.ph}
+    PISOPAY_API_USERNAME: ${PISOPAY_API_USERNAME:-}
+    PISOPAY_API_PASSWORD: ${PISOPAY_API_PASSWORD:-}
+    PISOPAY_PROCESSOR_NAME: ${PISOPAY_PROCESSOR_NAME:-BRTBusStation}
+    PISOPAY_QR_CHANNELS: ${PISOPAY_QR_CHANNELS:-QR1,QR2,QR3}
+    MAIL_PROVIDER: console
+    ROUTING_PROVIDER: ${ROUTING_PROVIDER:-osrm}
+    # Single sign-on from the Smart City app: taken from .env (SSO_ENABLED, SSO_SHARED_SECRET), off unless that file turns it on.
+    SSO_ENABLED: ${SSO_ENABLED:-false}
+    SSO_SHARED_SECRET: ${SSO_SHARED_SECRET:-dev-only-sso-secret-not-in-use-0123456789abcdef}
+  depends_on:
+    db:
+      condition: service_healthy
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: brt_bus_station
+    volumes: [brt-pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d brt_bus_station']
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    # No published port: nothing outside this stack needs the database (and 5432 is probably in use on this PC).
+
+  # One-shot: create the tables, load the demo data, and fetch the real roads between shelters (best effort: needs internet).
+  setup:
+    <<: *app
+    command: ['sh', '-c', 'bun run db:migrate && bun run db:seed && (bun run routes:build || echo "routes: skipped (no internet?)")']
+    restart: 'no'
+
+  web:
+    <<: *app
+    command: ['bun', 'run', 'start']
+    ports: ['${BRT_PORT:-8080}:3000']
+    depends_on:
+      db:
+        condition: service_healthy
+      setup:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # The bus simulator and the ticket-expiry worker.
+  workers:
+    <<: *app
+    command: ['bun', 'run', 'workers']
+    depends_on:
+      db:
+        condition: service_healthy
+      setup:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  brt-pgdata:

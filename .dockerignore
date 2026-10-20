@@ -1,0 +1,15 @@
+node_modules
+.next
+.next-*
+.git
+.env
+.env.*
+!.env.example
+mobile
+dist
+*.apk
+coverage
+tsconfig.tsbuildinfo
+public/brt-design-handoff
+Cavite_BRT_P2P_and_APMS_Locations_Updated.xlsx
+payment_methods.webp

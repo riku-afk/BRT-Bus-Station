@@ -21,7 +21,7 @@ export async function originMiddleware(c: Context<AppEnv>, next: Next) {
     // Webhooks come from provider servers (no Origin header) and authenticate by signature instead.
     const origin = c.req.header('origin');
     if (origin) {
-      const allowed = new Set([new URL(c.req.url).origin, new URL(env.baseUrl).origin]);
+      const allowed = new Set([new URL(c.req.url).origin, new URL(env.baseUrl).origin, ...env.extraOrigins.map((o) => new URL(o).origin)]);
       if (!allowed.has(origin)) throw ApiError.forbidden('Cross-site request refused');
     }
   }

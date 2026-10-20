@@ -12,6 +12,12 @@ const schema = z.object({
   APP_ENV: z.enum(APP_ENVIRONMENTS).default('local'),
   APP_BASE_URL: z.url().default('http://localhost:3000'),
   LOG_FORMAT: z.enum(['pretty', 'json']).default('pretty'),
+  // Other addresses the app is opened from, besides APP_BASE_URL: writes from these origins are accepted (comma separated, e.g. the
+  // Android emulator's http://localhost:8080 when the port is forwarded with adb reverse). Every other site stays refused.
+  APP_EXTRA_ORIGINS: z
+    .string()
+    .default('')
+    .transform((v) => v.split(',').map((o) => o.trim()).filter(Boolean)),
 
   DATABASE_URL: z.string().min(1).default('postgres://postgres:password@localhost:5432/brt_bus_station'),
   DATABASE_POOL_MAX: z.coerce.number().int().positive().default(10),
@@ -103,6 +109,7 @@ export const env = {
   isTest: e.NODE_ENV === 'test',
   appEnv: e.APP_ENV,
   baseUrl: e.APP_BASE_URL,
+  extraOrigins: e.APP_EXTRA_ORIGINS,
   logFormat: e.LOG_FORMAT,
   database: { url: e.DATABASE_URL, poolMax: e.DATABASE_POOL_MAX },
   session: { secret: e.SESSION_SECRET, ttlHours: e.SESSION_TTL_HOURS },
