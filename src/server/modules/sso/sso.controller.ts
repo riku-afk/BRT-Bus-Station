@@ -3,6 +3,7 @@ import type { Context } from 'hono';
 import { env } from '@config/env';
 import type { AppEnv } from '@core/types';
 import { createOpenAPIApp } from '@lib/openapi';
+import { roleAllowedHere } from '@lib/host-roles';
 import { createRateLimiter } from '@lib/rate-limit';
 import { ApiError, apiResponse } from '@lib/response';
 import { startSession } from '@modules/auth/auth.controller';
@@ -58,6 +59,7 @@ export const ssoController = createOpenAPIApp()
     const { token, next } = c.req.valid('query');
     if (!loginLimiter.hit(clientIp(c)).allowed) return c.redirect('/login?sso=failed', 302);
     try {
+      if (!roleAllowedHere(c, 'passenger')) return c.redirect('/login?sso=failed', 302); // this address is not for passengers
       const user = await ssoService.signIn(token);
       await startSession(c, user.id);
       return c.redirect(landing(next), 302);

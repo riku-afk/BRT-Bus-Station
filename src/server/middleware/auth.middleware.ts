@@ -8,6 +8,7 @@
 import type { Context, Next } from 'hono';
 import { getCookie } from 'hono/cookie';
 import { env } from '@config/env';
+import { roleAllowedHere } from '@lib/host-roles';
 import { ApiError } from '@lib/response';
 import type { AppEnv, AuthContext } from '@core/types';
 import { authService, SESSION_COOKIE } from '@modules/auth';
@@ -31,7 +32,8 @@ export async function originMiddleware(c: Context<AppEnv>, next: Next) {
 export async function sessionMiddleware(c: Context<AppEnv>, next: Next) {
   const token = getCookie(c, SESSION_COOKIE);
   const user = token ? await authService.userFromSessionToken(token) : null;
-  c.set('auth', user ? { user } : null);
+  // A session from another address's account (an admin on the konduktor address) counts as signed out here.
+  c.set('auth', user && roleAllowedHere(c, user.role) ? { user } : null);
   await next();
 }
 

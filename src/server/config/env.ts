@@ -6,6 +6,7 @@
  */
 import { z } from 'zod';
 import { APP_ENVIRONMENTS } from '@shared/app-info';
+import { parseHostRoles } from '@shared/host-roles';
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -18,6 +19,9 @@ const schema = z.object({
     .string()
     .default('')
     .transform((v) => v.split(',').map((o) => o.trim()).filter(Boolean)),
+
+  // Which role may sign in on which address, e.g. "brt.example.com=admin,scan.example.com=konduktor,app.example.com=passenger". Empty = no restriction.
+  HOST_ROLES: z.string().default(''),
 
   DATABASE_URL: z.string().min(1).default('postgres://postgres:password@localhost:5432/brt_bus_station'),
   DATABASE_POOL_MAX: z.coerce.number().int().positive().default(10),
@@ -110,6 +114,7 @@ export const env = {
   appEnv: e.APP_ENV,
   baseUrl: e.APP_BASE_URL,
   extraOrigins: e.APP_EXTRA_ORIGINS,
+  hostRoles: parseHostRoles(e.HOST_ROLES),
   logFormat: e.LOG_FORMAT,
   database: { url: e.DATABASE_URL, poolMax: e.DATABASE_POOL_MAX },
   session: { secret: e.SESSION_SECRET, ttlHours: e.SESSION_TTL_HOURS },

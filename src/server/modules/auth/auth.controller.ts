@@ -4,6 +4,7 @@ import { deleteCookie, setCookie } from 'hono/cookie';
 import { env } from '@config/env';
 import type { AppEnv } from '@core/types';
 import { createOpenAPIApp } from '@lib/openapi';
+import { assertRoleAllowedHere } from '@lib/host-roles';
 import { createRateLimiter } from '@lib/rate-limit';
 import { ApiError, apiResponse } from '@lib/response';
 import { LoginBody, NullableUserResponse, OkResponse, RegisterBody, UserResponse } from './auth.schema';
@@ -67,6 +68,7 @@ const meRoute = createRoute({
 
 export const authController = createOpenAPIApp()
   .openapi(registerRoute, async (c) => {
+    assertRoleAllowedHere(c, 'passenger');
     const user = await authService.register(c.req.valid('json'));
     await startSession(c, user.id);
     return c.json(apiResponse(toView(user)), 201);
@@ -81,6 +83,8 @@ export const authController = createOpenAPIApp()
     }
     const user = await authService.authenticate(email, password);
     loginLimiter.reset(key);
+    // Each address is for one kind of account: the right password on the wrong address does not sign in.
+    assertRoleAllowedHere(c, user.role);
     await startSession(c, user.id);
     return c.json(apiResponse(toView(user)), 200);
   })
