@@ -28,7 +28,7 @@ describe('system controller', () => {
   it('exposes software name and version', async () => {
     const res = await buildApp().request('/system/info');
     const body = await res.json();
-    expect(body.data.versionLabel).toMatch(/^BRT Bus Station v\d+\.\d+\.\d+/);
+    expect(body.data.versionLabel).toMatch(/^Cavite Smart Transport Terminal v\d+\.\d+\.\d+/);
     // Whatever the developer's .env selects (mock or pisopay): it is reported as configured.
     expect(body.data.paymentProvider).toBe(env.payment.provider);
   });

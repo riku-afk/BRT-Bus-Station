@@ -82,7 +82,7 @@ export function AdminShell({ user }: { user: CurrentUser | null | undefined }) {
               <Bus className="size-[22px]" aria-hidden />
             </span>
             <span className="flex flex-col">
-              <span className="text-base font-extrabold tracking-tight">BRT Bus Station</span>
+              <span className="text-base font-extrabold leading-tight tracking-tight">Cavite Smart Transport Terminal</span>
               <span className="text-xs text-[#9ba6c2]">Admin console</span>
             </span>
           </Link>
@@ -114,7 +114,7 @@ export function AdminShell({ user }: { user: CurrentUser | null | undefined }) {
         <div className="mt-auto flex flex-col gap-1.5 rounded-2xl bg-navy-2 p-4">
           <span className="text-[13px] font-bold">Need help?</span>
           <span className="text-xs leading-relaxed text-[#9ba6c2]">Contact the BRT system support team for help with this console.</span>
-          <span className="mt-1 text-[11px] text-[#8590ad]">{data?.versionLabel ?? 'BRT Bus Station'}</span>
+          <span className="mt-1 text-[11px] text-[#8590ad]">{data?.versionLabel ?? 'Cavite Smart Transport Terminal'}</span>
         </div>
       </aside>
 
@@ -133,7 +133,7 @@ export function AdminShell({ user }: { user: CurrentUser | null | undefined }) {
             </button>
             <div className="flex flex-col gap-0.5">
               <span className="text-xs text-muted-foreground">Admin / {here?.label ?? 'Page'}</span>
-              <span className="text-lg font-extrabold leading-tight tracking-tight">{here?.title ?? here?.label ?? 'BRT Bus Station'}</span>
+              <span className="text-lg font-extrabold leading-tight tracking-tight">{here?.title ?? here?.label ?? 'Cavite Smart Transport Terminal'}</span>
             </div>
           </div>
           <div className="flex items-center gap-3">

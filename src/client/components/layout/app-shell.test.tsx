@@ -20,7 +20,7 @@ function fakeApi(role: Role, tickets: unknown[] = []) {
           ? ok({ id: 'u1', email: 'u@t.test', fullName: 'Jordan Reyes', role })
           : new Response(JSON.stringify({ success: false, error: { code: 'UNAUTHORIZED', message: 'Sign in' }, timestamp: '' }), { status: 401 });
       }
-      if (url === '/api/system/info') return ok({ versionLabel: 'BRT Bus Station v0.1.0', showPocBanner: false });
+      if (url === '/api/system/info') return ok({ versionLabel: 'Cavite Smart Transport Terminal v0.1.0', showPocBanner: false });
       if (url === '/api/tickets/mine') return ok(tickets);
       return ok({});
     }),
@@ -60,13 +60,13 @@ describe('the passenger and konduktor frame', () => {
     fakeApi('passenger');
     view();
     await screen.findAllByTestId('nav-user');
-    expect(labels(sideNav())).toEqual(['BRT Bus StationRide the line', 'Map', 'My tickets']);
+    expect(labels(sideNav())).toEqual(['Cavite Smart Transport TerminalRide the line', 'Map', 'My tickets']);
     expect(screen.getByText('HOME PAGE')).toBeTruthy();
     cleanup();
     fakeApi('konduktor');
     view();
     await screen.findAllByTestId('nav-user');
-    expect(labels(sideNav())).toEqual(['BRT Bus StationKonduktor app', 'My bus', 'Scan', 'History']);
+    expect(labels(sideNav())).toEqual(['Cavite Smart Transport TerminalKonduktor app', 'My bus', 'Scan', 'History']);
   });
 
   it('marks the page you are on, in the side bar and in the tab bar', async () => {
@@ -101,7 +101,7 @@ describe('the passenger and konduktor frame', () => {
   it('shows the software name and version', async () => {
     fakeApi('passenger');
     view();
-    expect(await screen.findByText('BRT Bus Station v0.1.0')).toBeTruthy();
+    expect(await screen.findByText('Cavite Smart Transport Terminal v0.1.0')).toBeTruthy();
   });
 });
 
@@ -197,7 +197,7 @@ describe('the admin console frame', () => {
     expect(nav.getByRole('link', { name: 'Overview' }).getAttribute('aria-current')).toBe('page');
     expect(nav.getByRole('link', { name: 'Buses' }).getAttribute('aria-current')).toBeNull();
     expect(nav.getByText('Need help?')).toBeTruthy();
-    expect(nav.getByText('BRT Bus Station v0.1.0')).toBeTruthy();
+    expect(nav.getByText('Cavite Smart Transport Terminal v0.1.0')).toBeTruthy();
   });
 
   it('puts the breadcrumb, page title, who is signed in and Log out in the header', async () => {

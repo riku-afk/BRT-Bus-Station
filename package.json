@@ -1,6 +1,6 @@
 {
   "name": "brt-bus-station",
-  "description": "BRT Bus Station — bus ticketing proof of concept for Cavite bus lines",
+  "description": "Cavite Smart Transport Terminal — bus ticketing proof of concept for Cavite bus lines",
   "private": true,
   "version": "0.1.0",
   "type": "module",

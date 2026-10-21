@@ -10,7 +10,7 @@ describe('PWA manifest and service worker', () => {
   };
 
   it('is installable: name, start URL, standalone display and 192 / 512 / maskable icons that exist', () => {
-    expect(manifest.name).toBe('BRT Bus Station');
+    expect(manifest.name).toBe('Cavite Smart Transport Terminal');
     expect(manifest.start_url).toBe('/');
     expect(manifest.display).toBe('standalone');
     expect(manifest.icons.map((i) => i.sizes)).toEqual(expect.arrayContaining(['192x192', '512x512']));

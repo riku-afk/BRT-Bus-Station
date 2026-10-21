@@ -42,7 +42,7 @@ export function MockPaymentPage() {
           </span>
           <div className="flex flex-col">
             <h1 className="text-lg font-extrabold">Complete your payment</h1>
-            <span className="text-[13px] text-white/85">BRT Bus Station ticket</span>
+            <span className="text-[13px] text-white/85">Cavite Smart Transport Terminal ticket</span>
           </div>
         </div>
         <div className="flex flex-col gap-4 p-5">

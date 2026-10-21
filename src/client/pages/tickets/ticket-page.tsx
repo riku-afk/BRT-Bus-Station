@@ -160,7 +160,7 @@ export function TicketPage() {
                 <span className="grid size-[26px] place-items-center rounded-lg bg-[#facc15] text-[#1c1203]">
                   <Bus className="size-3.5" strokeWidth={2.4} aria-hidden />
                 </span>
-                BRT Bus Station
+                Cavite Smart Transport Terminal
               </span>
               <TicketStatusBadge status={ticket.status} className="bg-[#dcfce7] text-[11px] font-extrabold uppercase tracking-wider text-[#166534]" />
             </div>

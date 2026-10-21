@@ -58,7 +58,7 @@ const schema = z.object({
 
   // Email (NTF-01): `console` only records that a message would be sent (default, works offline); `smtp` really sends it.
   MAIL_PROVIDER: z.enum(['console', 'smtp']).default('console'),
-  MAIL_FROM: z.string().min(3).default('BRT Bus Station <no-reply@brt.local>'),
+  MAIL_FROM: z.string().min(3).default('Cavite Smart Transport Terminal <no-reply@brt.local>'),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(587),
   // true = TLS from the first byte (port 465); false = STARTTLS when the server offers it (port 587).

@@ -1,6 +1,6 @@
 {
-  "name": "BRT Bus Station",
-  "short_name": "BRT",
+  "name": "Cavite Smart Transport Terminal",
+  "short_name": "CSTT",
   "description": "Bus ticketing for Cavite bus lines",
   "id": "/",
   "start_url": "/",

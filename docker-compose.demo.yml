@@ -1,4 +1,4 @@
-# BRT Bus Station on this PC, for trying it on a phone (the Android app, or a browser) on the same Wi-Fi.
+# Cavite Smart Transport Terminal on this PC, for trying it on a phone (the Android app, or a browser) on the same Wi-Fi.
 #
 #   $env:BRT_HOST_IP = "10.10.0.4"        # this PC's address on the Wi-Fi the phone uses (ipconfig)
 #   docker compose -f docker-compose.demo.yml up --build -d

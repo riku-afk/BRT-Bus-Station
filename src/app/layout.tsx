@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   applicationName: APP_INFO.softwareName,
   manifest: '/manifest.webmanifest',
   icons: { icon: '/icons/icon-192.png', apple: '/icons/apple-touch-icon.png' },
-  appleWebApp: { capable: true, title: 'BRT', statusBarStyle: 'default' },
+  appleWebApp: { capable: true, title: 'CSTT', statusBarStyle: 'default' },
 };
 
 export const viewport: Viewport = {

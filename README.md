@@ -1,4 +1,4 @@
-# BRT Bus Station
+# Cavite Smart Transport Terminal
 
 Bus ticketing proof of concept for Cavite bus lines: passengers see the buses waiting at each shelter on a live map and buy a ticket on one, konduktors dispatch their own bus and scan tickets, admins monitor everything. See [ARCHITECTURE.md](ARCHITECTURE.md), [AGENTS.md](AGENTS.md), [plan/](plan/) and the [demo script](plan/demo-script.md).
 

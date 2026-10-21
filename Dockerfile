@@ -1,4 +1,4 @@
-# BRT Bus Station: the web app (Next.js, Node runtime) and its workers (Bun) in one image.
+# Cavite Smart Transport Terminal: the web app (Next.js, Node runtime) and its workers (Bun) in one image.
 # Used by docker-compose.demo.yml; see plan/docker-local.md.
 FROM node:22-bookworm-slim
 

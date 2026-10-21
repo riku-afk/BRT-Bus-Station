@@ -6,13 +6,6 @@ import { ThemeToggle } from './theme-toggle';
 
 export type AuthVariant = 'signin' | 'register';
 
-
-const CHIPS = [
-  ['Passengers', '#38bdf8'],
-  ['Konduktors', '#a78bfa'],
-  ['Admins', '#facc15'],
-] as const;
-
 const STEPS = [
   ['See where buses are waiting, live.', '#0369a1'],
   ['Buy for yourself or your group, pay by QR Ph.', '#be185d'],
@@ -45,13 +38,13 @@ export function AuthCard({ variant, children }: { variant: AuthVariant; children
     <div className={`flex min-h-svh flex-col bg-[#0f172a] text-foreground min-[960px]:flex-row min-[960px]:bg-background`}>
       {/* Wide screens: the brand panel. Always dark, in both themes. */}
       <section
-        aria-label="About BRT Bus Station"
+        aria-label="About Cavite Smart Transport Terminal"
         className={`relative hidden flex-none flex-col justify-between overflow-hidden bg-[#0f172a] px-14 pb-11 pt-10 text-white min-[960px]:flex min-[960px]:w-[54%]`}
       >
         <PanelArt variant={variant} />
         <div className="relative flex items-center gap-3">
           <BrtIcon size={44} />
-          <span className="text-lg font-extrabold tracking-tight">BRT Bus Station</span>
+          <span className="text-lg font-extrabold leading-tight tracking-tight">Cavite Smart Transport Terminal</span>
         </div>
         <div className="relative flex max-w-[470px] flex-col gap-[18px]">
           <h2 className="text-[54px] font-extrabold leading-[1.02] tracking-[-0.03em]">{headline}</h2>
@@ -81,7 +74,7 @@ export function AuthCard({ variant, children }: { variant: AuthVariant; children
           )}
         </div>
         <span className="relative text-[13px] text-slate-400">
-          {signin ? `One account for every role${data?.versionLabel ? ` · ${data.versionLabel}` : ''}` : 'Konduktor and admin accounts are created by your administrator.'}
+          {signin ? `${data?.versionLabel ? `${data.versionLabel}` : ''}` : ''}
         </span>
       </section>
 
@@ -92,7 +85,7 @@ export function AuthCard({ variant, children }: { variant: AuthVariant; children
           {signin ? (
             <span className="flex items-center gap-2.5">
               <BrtIcon size={38} />
-              <span className="text-base font-extrabold">BRT Bus Station</span>
+              <span className="text-base font-extrabold leading-tight">Cavite Smart Transport Terminal</span>
             </span>
           ) : (
             <Link to="/login" aria-label="Back to sign in" className="grid size-11 place-items-center rounded-xl bg-white/15 text-white">

@@ -1,5 +1,5 @@
 /**
- * BRT Bus Station API — Hono application.
+ * Cavite Smart Transport Terminal API — Hono application.
  *
  * Mounted by src/app/api/[[...route]]/route.ts, which strips the /api prefix.
  * Register each module controller below (controller -> service -> repository).

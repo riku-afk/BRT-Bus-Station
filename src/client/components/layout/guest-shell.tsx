@@ -22,7 +22,7 @@ export function GuestShell() {
           <span className="grid size-10 place-items-center rounded-xl bg-[#facc15] text-[#0f172a]">
             <Bus className="size-5" aria-hidden />
           </span>
-          <span className="text-base font-extrabold tracking-tight">BRT Bus Station</span>
+          <span className="text-base font-extrabold leading-tight tracking-tight">Cavite Smart Transport Terminal</span>
         </Link>
         <div className="flex items-center gap-3">
           <ThemeToggle />

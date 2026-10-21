@@ -121,7 +121,7 @@ export function MemberShell({ user }: { user: CurrentUser & { role: 'passenger' 
             <Bus className="size-[22px]" aria-hidden />
           </span>
           <span className="flex flex-col">
-            <span className="text-base font-extrabold tracking-tight">BRT Bus Station</span>
+            <span className="text-base font-extrabold leading-tight tracking-tight">Cavite Smart Transport Terminal</span>
             <span className="text-xs text-[#9ba6c2]">{meta.subtitle}</span>
           </span>
         </Link>
@@ -130,7 +130,7 @@ export function MemberShell({ user }: { user: CurrentUser & { role: 'passenger' 
             <SideLink key={`${item.to}-${item.label}`} item={item} role={user.role} />
           ))}
         </nav>
-        <p className="mt-auto px-2 text-[11px] text-[#8590ad]">{data?.versionLabel ?? 'BRT Bus Station'}</p>
+        <p className="mt-auto px-2 text-[11px] text-[#8590ad]">{data?.versionLabel ?? 'Cavite Smart Transport Terminal'}</p>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -140,7 +140,7 @@ export function MemberShell({ user }: { user: CurrentUser & { role: 'passenger' 
             <span className="text-xs text-muted-foreground">
               {meta.crumb} / {here?.label ?? 'Page'}
             </span>
-            <span className="text-lg font-extrabold leading-tight tracking-tight">{here?.title ?? here?.label ?? 'BRT Bus Station'}</span>
+            <span className="text-lg font-extrabold leading-tight tracking-tight">{here?.title ?? here?.label ?? 'Cavite Smart Transport Terminal'}</span>
           </div>
           <div className="flex items-center gap-3">
             <ThemeToggle />
