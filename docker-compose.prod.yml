@@ -1,0 +1,42 @@
+# Cavite Smart Transport Terminal on a server: the web app and the workers in Docker, the database OUTSIDE Docker
+# (PostgreSQL installed on the server, so Navicat can connect to it). Nginx on the server sits in front (deploy/nginx/brt.conf).
+#
+#   cp .env.production.example .env      # then fill it in
+#   docker compose -f docker-compose.prod.yml up --build -d
+#
+# Steps, and the first-time database setup: plan/deploy.md.
+name: brt
+
+x-app: &app
+  build: .
+  image: cavite-smart-transport-terminal:latest
+  env_file: .env
+  environment:
+    NODE_ENV: production
+  # Only needed when PostgreSQL is on this same machine: it is then reachable from the containers as host.docker.internal.
+  extra_hosts: ['host.docker.internal:host-gateway']
+  restart: unless-stopped
+
+services:
+  # One-shot: create or update the tables (idempotent). Runs before the app starts.
+  migrate:
+    <<: *app
+    command: ['bun', 'run', 'db:migrate']
+    restart: 'no'
+
+  web:
+    <<: *app
+    command: ['bun', 'run', 'start']
+    # Only the server itself (Nginx) can reach the app; it is not open to the internet.
+    ports: ['127.0.0.1:${BRT_PORT:-8080}:3000']
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # The ticket-expiry worker and the bus simulator.
+  workers:
+    <<: *app
+    command: ['bun', 'run', 'workers']
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
