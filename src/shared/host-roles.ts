@@ -31,11 +31,8 @@ export function hostAllowsRole(map: HostRoles, host: string, role: Role): boolea
   return !allowed || allowed.includes(role);
 }
 
-const PLURAL: Record<Role, string> = { passenger: 'passengers', konduktor: 'konduktors', admin: 'admins' };
-
-/** The sentence shown when someone signs in on the wrong address. */
-export function wrongHostMessage(map: HostRoles, host: string): string {
-  const allowed = map.get(host) ?? [];
-  const who = allowed.map((r) => PLURAL[r]).join(' and ');
-  return `This address is for ${who}. Please use the address meant for your account.`;
-}
+/**
+ * What anyone gets when they sign in on an address that is not for their role: the same sentence as for a wrong password, for everyone,
+ * so the reply never reveals that an account exists, that the password was right, or which address belongs to which role.
+ */
+export const WRONG_ADDRESS_MESSAGE = 'Invalid email or password';

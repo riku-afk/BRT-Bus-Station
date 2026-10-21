@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hostAllowsRole, normalizeHost, parseHostRoles, wrongHostMessage } from './host-roles';
+import { hostAllowsRole, normalizeHost, parseHostRoles, WRONG_ADDRESS_MESSAGE } from './host-roles';
 
 const map = parseHostRoles('brt.example.com=admin, scan.example.com=konduktor, app.example.com=passenger, both.example.com=admin+konduktor');
 
@@ -32,8 +32,7 @@ describe('host roles', () => {
     expect(() => parseHostRoles('a.example.com')).toThrow(/host=role/);
   });
 
-  it('says who an address is for', () => {
-    expect(wrongHostMessage(map, 'scan.example.com')).toContain('konduktors');
-    expect(wrongHostMessage(map, 'both.example.com')).toContain('admins and konduktors');
+  it('uses the wrong-password sentence for everyone, so it reveals nothing about the account or the addresses', () => {
+    expect(WRONG_ADDRESS_MESSAGE).toBe('Invalid email or password');
   });
 });

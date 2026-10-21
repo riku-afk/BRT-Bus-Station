@@ -2,7 +2,7 @@ import type { Context } from 'hono';
 import { env } from '@config/env';
 import type { AppEnv } from '@core/types';
 import { ApiError } from '@lib/response';
-import { hostAllowsRole, normalizeHost, wrongHostMessage } from '@shared/host-roles';
+import { hostAllowsRole, normalizeHost, WRONG_ADDRESS_MESSAGE } from '@shared/host-roles';
 import type { Role } from '@shared/rbac/roles';
 
 /** The address the browser used (behind the proxy this is the forwarded host). */
@@ -15,6 +15,7 @@ export function roleAllowedHere(c: Context<AppEnv>, role: Role): boolean {
   return hostAllowsRole(env.hostRoles, requestHost(c), role);
 }
 
+/** For sign-in: refuses with the same 401 and message as a wrong password. */
 export function assertRoleAllowedHere(c: Context<AppEnv>, role: Role): void {
-  if (!roleAllowedHere(c, role)) throw ApiError.forbidden(wrongHostMessage(env.hostRoles, requestHost(c)));
+  if (!roleAllowedHere(c, role)) throw new ApiError(401, 'INVALID_CREDENTIALS', WRONG_ADDRESS_MESSAGE);
 }

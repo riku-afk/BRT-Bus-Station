@@ -4,7 +4,7 @@ import { deleteCookie, setCookie } from 'hono/cookie';
 import { env } from '@config/env';
 import type { AppEnv } from '@core/types';
 import { createOpenAPIApp } from '@lib/openapi';
-import { assertRoleAllowedHere } from '@lib/host-roles';
+import { assertRoleAllowedHere, roleAllowedHere } from '@lib/host-roles';
 import { createRateLimiter } from '@lib/rate-limit';
 import { ApiError, apiResponse } from '@lib/response';
 import { LoginBody, NullableUserResponse, OkResponse, RegisterBody, UserResponse } from './auth.schema';
@@ -68,7 +68,7 @@ const meRoute = createRoute({
 
 export const authController = createOpenAPIApp()
   .openapi(registerRoute, async (c) => {
-    assertRoleAllowedHere(c, 'passenger');
+    if (!roleAllowedHere(c, 'passenger')) throw ApiError.forbidden('Registration is not available here');
     const user = await authService.register(c.req.valid('json'));
     await startSession(c, user.id);
     return c.json(apiResponse(toView(user)), 201);
@@ -82,9 +82,10 @@ export const authController = createOpenAPIApp()
       throw new ApiError(429, 'RATE_LIMITED', 'Too many sign-in attempts. Try again later.');
     }
     const user = await authService.authenticate(email, password);
-    loginLimiter.reset(key);
-    // Each address is for one kind of account: the right password on the wrong address does not sign in.
+    // Each address is for one kind of account: the right password on the wrong address fails exactly like a wrong password
+    // (and, like it, counts toward the attempt limit).
     assertRoleAllowedHere(c, user.role);
+    loginLimiter.reset(key);
     await startSession(c, user.id);
     return c.json(apiResponse(toView(user)), 200);
   })
