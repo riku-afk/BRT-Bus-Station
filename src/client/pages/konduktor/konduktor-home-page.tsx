@@ -132,11 +132,44 @@ export function KonduktorHomePage() {
   const heroPlace = operation === 'available' ? mine?.station?.name : operation === 'on_road' ? mine?.trip?.destinationName : '—';
   const destShort = operation === 'available' ? (plan.target?.name ?? mine?.defaultDestination?.name ?? '—') : operation === 'on_road' ? (mine?.trip?.destinationName ?? '—') : '—';
 
+  /** What they scanned today and the way to scan more. On a phone it comes first, above the bus card, because it is what they use while boarding. */
+  const ticketsCard = (
+    <section className="relative flex flex-col gap-3.5 overflow-hidden rounded-[20px] bg-[#f59e0b] p-[18px] text-[#1c1203] sm:p-[22px]" aria-label="Tickets">
+      <ScanLine aria-hidden strokeWidth={1.3} className="pointer-events-none absolute -bottom-7 -right-6 size-[150px] opacity-[0.14]" />
+      <div className="relative flex flex-col gap-1">
+        <h2 className="text-xl font-extrabold">Tickets</h2>
+        <span className="text-[13px] font-medium">Check passengers&apos; tickets as they board.</span>
+      </div>
+      <div className="relative grid grid-cols-3 gap-2">
+        {[
+          { label: 'Scans today', value: scansToday?.total ?? 0, ink: '' },
+          { label: 'Valid', value: scansToday?.valid ?? 0, ink: 'text-[#166534]' },
+          { label: 'Rejected', value: scansToday?.rejected ?? 0, ink: 'text-[#9f1239]' },
+        ].map((c) => (
+          <div key={c.label} className="flex flex-col rounded-xl bg-white/55 px-3 py-2.5">
+            <span className="text-[11px] font-bold">{c.label}</span>
+            <span className={cn('text-[22px] font-extrabold', c.ink)}>{c.value}</span>
+          </div>
+        ))}
+      </div>
+      <div className="relative flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
+        <Link to="/konduktor/scan" className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-[14px] bg-[#1c1203] px-4 text-[15px] font-extrabold text-white hover:brightness-125">
+          <ScanLine className="size-[18px]" aria-hidden /> Scan tickets
+        </Link>
+        <Link to="/konduktor/history" className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-[14px] bg-white px-4 text-[15px] font-extrabold text-[#1c1203] hover:bg-white/90">
+          Scan history <ArrowRight className="size-4" aria-hidden />
+        </Link>
+      </div>
+    </section>
+  );
+
   return (
     <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-5 px-4 pb-6 pt-4 sm:px-6 md:gap-6 md:px-8 md:pb-10 md:pt-7">
       {plan.dialog}
       {isLoading && <Skeleton className="h-40 w-full rounded-[22px]" />}
       {error && <p className="text-sm text-destructive">{errorMessage(error)}</p>}
+
+      {!wide && ticketsCard}
 
       <section className="relative flex flex-wrap items-center justify-between gap-5 overflow-hidden rounded-[22px] bg-[#c2410c] p-5 text-white sm:px-7 sm:py-[26px]" aria-label="Your bus">
         <Bus aria-hidden strokeWidth={1.2} className="pointer-events-none absolute -right-5 -top-10 size-[220px] opacity-[0.13]" />
@@ -267,33 +300,7 @@ export function KonduktorHomePage() {
 
           {mine && mine.operation !== 'no_bus' && <PassengerCount />}
 
-          <section className="relative flex flex-col gap-3.5 overflow-hidden rounded-[20px] bg-[#f59e0b] p-[18px] text-[#1c1203] sm:p-[22px]" aria-label="Tickets">
-            <ScanLine aria-hidden strokeWidth={1.3} className="pointer-events-none absolute -bottom-7 -right-6 size-[150px] opacity-[0.14]" />
-            <div className="relative flex flex-col gap-1">
-              <h2 className="text-xl font-extrabold">Tickets</h2>
-              <span className="text-[13px] font-medium">Check passengers&apos; tickets as they board.</span>
-            </div>
-            <div className="relative grid grid-cols-3 gap-2">
-              {[
-                { label: 'Scans today', value: scansToday?.total ?? 0, ink: '' },
-                { label: 'Valid', value: scansToday?.valid ?? 0, ink: 'text-[#166534]' },
-                { label: 'Rejected', value: scansToday?.rejected ?? 0, ink: 'text-[#9f1239]' },
-              ].map((c) => (
-                <div key={c.label} className="flex flex-col rounded-xl bg-white/55 px-3 py-2.5">
-                  <span className="text-[11px] font-bold">{c.label}</span>
-                  <span className={cn('text-[22px] font-extrabold', c.ink)}>{c.value}</span>
-                </div>
-              ))}
-            </div>
-            <div className="relative flex flex-col gap-2.5 sm:flex-row sm:flex-wrap">
-              <Link to="/konduktor/scan" className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-[14px] bg-[#1c1203] px-4 text-[15px] font-extrabold text-white hover:brightness-125">
-                <ScanLine className="size-[18px]" aria-hidden /> Scan tickets
-              </Link>
-              <Link to="/konduktor/history" className="flex h-[52px] flex-1 items-center justify-center gap-2 rounded-[14px] bg-white px-4 text-[15px] font-extrabold text-[#1c1203] hover:bg-white/90">
-                Scan history <ArrowRight className="size-4" aria-hidden />
-              </Link>
-            </div>
-          </section>
+          {wide && ticketsCard}
         </div>
       </div>
     </div>
