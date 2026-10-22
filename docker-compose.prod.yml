@@ -21,7 +21,7 @@ services:
   # One-shot: create or update the tables (idempotent). Runs before the app starts.
   migrate:
     <<: *app
-    command: ['bun', 'run', 'db:migrate']
+    command: ['bun', 'run']
     restart: 'no'
 
   web:
