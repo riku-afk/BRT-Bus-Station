@@ -9,10 +9,10 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { errorMessage } from '@/features/auth/use-auth';
 import { useMyKonduktor } from '@/features/konduktors/use-konduktors';
 import { PassengerCount } from '@/features/scans/passenger-count';
-import { useMyScans } from '@/features/scans/use-scans';
+import { useDispatchBlock, useMyScans } from '@/features/scans/use-scans';
 import { useStations } from '@/features/stations/use-stations';
 import { useBusEtas } from '@/features/eta/use-eta';
-import { DispatchPanel } from '@/features/tracking/dispatch-panel';
+import { DispatchBlockedNotice, DispatchPanel } from '@/features/tracking/dispatch-panel';
 import { describeDeparture, minutesUntilManilaTime } from '@/features/tracking/departure';
 import { useDispatchPlan } from '@/features/tracking/use-dispatch-plan';
 import { useBusStream } from '@/features/tracking/use-bus-stream';
@@ -69,6 +69,7 @@ export function KonduktorHomePage() {
   const setDeparture = useSetDeparture();
   const plan = useDispatchPlan(mine, stations);
   const wide = useIsWide();
+  const { blocked: dispatchBlocked } = useDispatchBlock();
   const now = useNow(30_000);
   // A departure time typed as a clock time (HH:MM, Manila).
   const [departAt, setDepartAt] = useState('');
@@ -163,6 +164,37 @@ export function KonduktorHomePage() {
     </section>
   );
 
+  /** Who is signed in: name, employee number, phone and the bus. On a phone it comes right after the Tickets card. */
+  const profileCard = profile ? (
+      <section className="flex flex-col gap-4 rounded-[20px] border bg-card p-[18px] sm:p-[22px]" aria-label="You">
+        <div className="flex items-center gap-3.5">
+          <span className="grid size-[54px] shrink-0 place-items-center rounded-full bg-[#7c3aed] text-lg font-extrabold text-white" aria-hidden>
+            {initials(profile.fullName)}
+          </span>
+          <div className="flex flex-col gap-0.5">
+            <span className="text-xs font-bold text-muted-foreground">You</span>
+            <span className="text-lg font-extrabold">{profile.fullName}</span>
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold" style={{ background: 'color-mix(in srgb, #7c3aed 12%, var(--surface))' }}>
+            <IdCard className="size-3.5 text-[#7c3aed]" aria-hidden /> {profile.employeeNo}
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold" style={{ background: 'color-mix(in srgb, #0f766e 12%, var(--surface))' }}>
+            <Smartphone className="size-3.5 text-[#0f766e]" aria-hidden /> {profile.phone ?? '—'}
+          </span>
+          {profile.bus && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ffedd5] px-3 py-1.5 text-xs font-bold text-[#9a3412]">
+              <Bus className="size-3.5" aria-hidden /> {profile.bus.name} ({profile.bus.plateNumber})
+            </span>
+          )}
+        </div>
+      </section>
+  ) : null;
+
+  /** How many are on board, with Complete ride. On a phone it sits right above Dispatch bus, because completing the ride is what unlocks it. */
+  const passengerCard = mine && mine.operation !== 'no_bus' ? <PassengerCount /> : null;
+
   return (
     <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-5 px-4 pb-6 pt-4 sm:px-6 md:gap-6 md:px-8 md:pb-10 md:pt-7">
       {plan.dialog}
@@ -170,6 +202,7 @@ export function KonduktorHomePage() {
       {error && <p className="text-sm text-destructive">{errorMessage(error)}</p>}
 
       {!wide && ticketsCard}
+      {!wide && profileCard}
 
       <section className="relative flex flex-wrap items-center justify-between gap-5 overflow-hidden rounded-[22px] bg-[#c2410c] p-5 text-white sm:px-7 sm:py-[26px]" aria-label="Your bus">
         <Bus aria-hidden strokeWidth={1.2} className="pointer-events-none absolute -right-5 -top-10 size-[220px] opacity-[0.13]" />
@@ -232,17 +265,33 @@ export function KonduktorHomePage() {
                   <DispatchPanel mine={mine} stations={stations} buses={buses} plan={plan} />
                 </Section>
               ) : (
-                <Link to="/konduktor/dispatch" className="flex h-[60px] items-center gap-3.5 rounded-2xl bg-[#c2410c] px-[18px] text-white shadow-sm">
-                  <Send className="size-5" aria-hidden />
-                  <span className="flex flex-1 flex-col">
-                    <span className="text-base font-extrabold">Dispatch bus</span>
-                    <span className="text-xs text-[#fed7aa]">{plan.target ? `to ${plan.target.name}` : 'Choose where it goes'}</span>
-                  </span>
-                  <ChevronRight className="size-5" aria-hidden />
-                </Link>
+                <>
+                  {passengerCard}
+                  <DispatchBlockedNotice />
+                  {dispatchBlocked ? (
+                    <div aria-disabled="true" data-testid="dispatch-locked" className="flex h-[60px] cursor-not-allowed items-center gap-3.5 rounded-2xl bg-[#c2410c] px-[18px] text-white opacity-45">
+                      <Send className="size-5" aria-hidden />
+                      <span className="flex flex-1 flex-col">
+                        <span className="text-base font-extrabold">Dispatch bus</span>
+                        <span className="text-xs text-[#fed7aa]">Complete your ride first</span>
+                      </span>
+                    </div>
+                  ) : (
+                    <Link to="/konduktor/dispatch" className="flex h-[60px] items-center gap-3.5 rounded-2xl bg-[#c2410c] px-[18px] text-white shadow-sm">
+                      <Send className="size-5" aria-hidden />
+                      <span className="flex flex-1 flex-col">
+                        <span className="text-base font-extrabold">Dispatch bus</span>
+                        <span className="text-xs text-[#fed7aa]">{plan.target ? `to ${plan.target.name}` : 'Choose where it goes'}</span>
+                      </span>
+                      <ChevronRight className="size-5" aria-hidden />
+                    </Link>
+                  )}
+                </>
               )}
             </>
           )}
+
+          {!wide && operation !== 'available' && passengerCard}
 
           {operation === 'on_road' && mine?.trip && (
             <>
@@ -271,34 +320,9 @@ export function KonduktorHomePage() {
         </div>
 
         <div className="flex min-w-0 flex-[2_1_300px] flex-col gap-5">
-          {profile && (
-            <section className="flex flex-col gap-4 rounded-[20px] border bg-card p-[18px] sm:p-[22px]" aria-label="You">
-              <div className="flex items-center gap-3.5">
-                <span className="grid size-[54px] shrink-0 place-items-center rounded-full bg-[#7c3aed] text-lg font-extrabold text-white" aria-hidden>
-                  {initials(profile.fullName)}
-                </span>
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-bold text-muted-foreground">You</span>
-                  <span className="text-lg font-extrabold">{profile.fullName}</span>
-                </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold" style={{ background: 'color-mix(in srgb, #7c3aed 12%, var(--surface))' }}>
-                  <IdCard className="size-3.5 text-[#7c3aed]" aria-hidden /> {profile.employeeNo}
-                </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold" style={{ background: 'color-mix(in srgb, #0f766e 12%, var(--surface))' }}>
-                  <Smartphone className="size-3.5 text-[#0f766e]" aria-hidden /> {profile.phone ?? '—'}
-                </span>
-                {profile.bus && (
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ffedd5] px-3 py-1.5 text-xs font-bold text-[#9a3412]">
-                    <Bus className="size-3.5" aria-hidden /> {profile.bus.name} ({profile.bus.plateNumber})
-                  </span>
-                )}
-              </div>
-            </section>
-          )}
+          {wide && profileCard}
 
-          {mine && mine.operation !== 'no_bus' && <PassengerCount />}
+          {wide && passengerCard}
 
           {wide && ticketsCard}
         </div>

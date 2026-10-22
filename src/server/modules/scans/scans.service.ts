@@ -127,9 +127,15 @@ export const scansService = {
     const db = getDb();
     const scanner = await scansRepository.findScanner(db, userId);
     if (!scanner) throw ApiError.forbidden('Only konduktors have a ride');
-    if (!scanner.bus_id) return { passengers: 0, tickets: 0, since: null, atShelter: null, canComplete: false };
-    const [summary, shelter] = await Promise.all([scansRepository.rideSummary(db, scanner.bus_id), scansRepository.busShelter(db, scanner.bus_id)]);
+    if (!scanner.bus_id) return { passengers: 0, tickets: 0, since: null, atShelter: null, canComplete: false, mustCompleteBeforeDispatch: false, unfinishedPassengers: 0 };
+    const [summary, shelter, unfinished] = await Promise.all([
+      scansRepository.rideSummary(db, scanner.bus_id),
+      scansRepository.busShelter(db, scanner.bus_id),
+      scansRepository.unfinishedRide(db, scanner.bus_id),
+    ]);
     return {
+      mustCompleteBeforeDispatch: unfinished.passengers > 0,
+      unfinishedPassengers: unfinished.passengers,
       passengers: summary.passengers,
       tickets: summary.tickets,
       since: summary.since ? summary.since.toISOString() : null,

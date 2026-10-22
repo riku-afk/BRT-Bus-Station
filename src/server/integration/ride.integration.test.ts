@@ -16,7 +16,15 @@ const db = () => ctx.db.getDb();
 const st: string[] = [];
 const ids: Record<string, string> = {};
 
-type Ride = { passengers: number; tickets: number; since: string | null; atShelter: string | null; canComplete: boolean };
+type Ride = {
+  passengers: number;
+  tickets: number;
+  since: string | null;
+  atShelter: string | null;
+  canComplete: boolean;
+  mustCompleteBeforeDispatch: boolean;
+  unfinishedPassengers: number;
+};
 
 const parkBus = (busId: string, shelter: string | null) =>
   db().query(
@@ -69,7 +77,7 @@ afterAll(async () => {
 
 describe('the passenger count', () => {
   it('starts at zero, and the ride cannot be completed with nobody on board', async () => {
-    expect(await ride(kond1)).toEqual({ passengers: 0, tickets: 0, since: null, atShelter: 'A', canComplete: false });
+    expect(await ride(kond1)).toEqual({ passengers: 0, tickets: 0, since: null, atShelter: 'A', canComplete: false, mustCompleteBeforeDispatch: false, unfinishedPassengers: 0 });
     const res = await kond1.call('POST', '/scans/ride/complete');
     expect(res.status).toBe(409);
     expect(res.body.error?.message).toMatch(/no passengers/i);
@@ -135,5 +143,44 @@ describe('completing the ride', () => {
     expect((await kond1.call('POST', '/scans/ride/complete')).status).toBe(200);
     await expect(db().query('UPDATE ride_completions SET passengers = 0')).rejects.toThrow(/insert-only/);
     await expect(db().query('DELETE FROM ride_completions')).rejects.toThrow(/insert-only/);
+  });
+});
+
+describe('dispatching after a ride', () => {
+  const dispatch = (s: Session) => s.call('POST', '/tracking/my-bus/dispatch', {});
+
+  // Start every test from a clean count: complete whatever an earlier test left on the buses (nothing to complete is a harmless 409).
+  beforeEach(async () => {
+    // A trip left active by an earlier test would make the next dispatch fail with "already on the road".
+    await (await import('@modules/tracking/tracking.service')).trackingService.cancelActiveTrips();
+    await kond1.call('POST', '/scans/ride/complete');
+    await kond2.call('POST', '/scans/ride/complete');
+  });
+
+  it('is not blocked by passengers who boarded at the shelter the bus is waiting at now', async () => {
+    await boardGroup(2); // scanned after the bus parked here: they are leaving with it
+    expect(await ride(kond1)).toMatchObject({ passengers: 2, mustCompleteBeforeDispatch: false, unfinishedPassengers: 0 });
+    expect((await dispatch(kond1)).status).toBe(201);
+  });
+
+  it('is refused when the bus has arrived and the last ride was not completed, and allowed once it is', async () => {
+    await boardGroup(3); // boarded at the first shelter
+    await parkBus(ids.bus1!, st[1]!); // the bus drove on and arrived at the next one
+    expect(await ride(kond1)).toMatchObject({ passengers: 3, canComplete: true, mustCompleteBeforeDispatch: true, unfinishedPassengers: 3 });
+
+    const refused = await dispatch(kond1);
+    expect(refused.status).toBe(409);
+    expect(refused.body.error?.message).toMatch(/Complete your ride first.*3 passengers/);
+
+    expect((await kond1.call('POST', '/scans/ride/complete')).status).toBe(200);
+    expect(await ride(kond1)).toMatchObject({ passengers: 0, mustCompleteBeforeDispatch: false, unfinishedPassengers: 0 });
+    expect((await dispatch(kond1)).status).toBe(201);
+  });
+
+  it('only counts the bus itself: another konduktor with no unfinished ride can dispatch', async () => {
+    await boardGroup(1);
+    await parkBus(ids.bus1!, st[1]!);
+    expect((await dispatch(kond1)).status).toBe(409);
+    expect((await dispatch(kond2)).status).toBe(201);
   });
 });

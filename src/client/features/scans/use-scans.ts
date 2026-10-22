@@ -27,6 +27,15 @@ export const useMyScans = (page = 1, days = 14, result: HistoryFilter = 'all') =
 /** The passengers on my bus since its last completed ride. Refreshed after every scan, and now and then in case another device scanned. */
 export const useRide = () => useQuery({ queryKey: [...SCANS_KEY, 'ride'], queryFn: () => apiGet<RideSummary>('/scans/ride'), refetchInterval: 8000 });
 
+/**
+ * Dispatching is blocked while the bus has arrived with passengers from its last trip and the ride was not completed. The server refuses
+ * the dispatch too; this only lets the screens disable the button and say why.
+ */
+export function useDispatchBlock() {
+  const { data } = useRide();
+  return { blocked: data?.mustCompleteBeforeDispatch === true, passengers: data?.unfinishedPassengers ?? 0 };
+}
+
 /** The bus has arrived: complete the ride, and the count starts again from zero. */
 export const useCompleteRide = () => {
   const qc = useQueryClient();

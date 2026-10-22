@@ -58,6 +58,10 @@ export type RideSummary = {
   atShelter: string | null;
   /** The ride can be completed: the bus has arrived at a shelter and there are passengers to clear. */
   canComplete: boolean;
+  /** The bus arrived with passengers from its last trip and the ride was not completed: dispatching is not allowed until it is. */
+  mustCompleteBeforeDispatch: boolean;
+  /** How many passengers are still counted from that last trip (0 when nothing blocks dispatching). */
+  unfinishedPassengers: number;
 };
 
 export type RideCompletion = { passengers: number; tickets: number; completedAt: string };

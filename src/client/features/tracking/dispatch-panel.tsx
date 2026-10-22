@@ -1,20 +1,36 @@
-import { Send } from 'lucide-react';
+import { CheckCheck, Send } from 'lucide-react';
 import { StationMap } from '@/components/map/station-map';
 import { NativeSelect } from '@/components/ui/native-select';
+import { useDispatchBlock } from '@/features/scans/use-scans';
 import type { Station } from '@/features/stations/use-stations';
 import type { BusPosition, MyBus } from '@shared/tracking/models';
 import type { DispatchPlan } from './use-dispatch-plan';
 
 const ORANGE = '#c2410c';
 
-/** The orange Dispatch button. */
+/** Why the Dispatch button is off: the ride that just ended has to be completed first. Nothing is shown when dispatching is allowed. */
+export function DispatchBlockedNotice() {
+  const { blocked, passengers } = useDispatchBlock();
+  if (!blocked) return null;
+  return (
+    <p role="status" data-testid="dispatch-blocked" className="flex items-start gap-2.5 rounded-2xl px-4 py-3 text-sm font-semibold" style={{ background: 'color-mix(in srgb, #f59e0b 16%, var(--surface))' }}>
+      <CheckCheck className="mt-0.5 size-[18px] shrink-0 text-[#b45309]" aria-hidden />
+      <span>
+        Complete your ride first. {passengers} passenger{passengers === 1 ? '' : 's'} from your last trip {passengers === 1 ? 'is' : 'are'} still counted. Tap “Complete ride”, then you can dispatch.
+      </span>
+    </p>
+  );
+}
+
+/** The orange Dispatch button. It stays off until the last ride is completed. */
 export function DispatchButton({ plan, mine, tall }: { plan: DispatchPlan; mine: MyBus; tall?: boolean }) {
+  const { blocked } = useDispatchBlock();
   return (
     <button
       type="button"
       onClick={plan.send}
-      disabled={plan.dispatching || !mine.defaultDestination}
-      className={`flex w-full items-center justify-center gap-2.5 rounded-[14px] bg-[#c2410c] font-extrabold text-white transition hover:brightness-110 disabled:opacity-60 ${tall ? 'h-14 text-[17px]' : 'h-[54px] text-base'}`}
+      disabled={plan.dispatching || !mine.defaultDestination || blocked}
+      className={`flex w-full items-center justify-center gap-2.5 rounded-[14px] bg-[#c2410c] font-extrabold text-white transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60 ${tall ? 'h-14 text-[17px]' : 'h-[54px] text-base'}`}
     >
       <Send className="size-[18px]" aria-hidden /> {plan.dispatching ? 'Dispatching…' : plan.target && tall ? `Dispatch to ${plan.target.name.replace(/^Bus Shelter /, '')}` : 'Dispatch bus'}
     </button>
@@ -87,6 +103,7 @@ export function DispatchPanel({ mine, stations, buses, plan, footerButton }: Pro
         </div>
       )}
 
+      <DispatchBlockedNotice />
       {!footerButton && <DispatchButton plan={plan} mine={mine} />}
       <p className="text-xs text-muted-foreground">The bus drives non-stop and becomes available again when it arrives.</p>
     </div>

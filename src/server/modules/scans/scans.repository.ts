@@ -97,6 +97,26 @@ export const scansRepository = {
     return rows[0]!;
   },
 
+  /**
+   * The passengers of a ride that arrived but was never completed: valid scans since the last completed ride that happened BEFORE the bus
+   * parked where it is now (so they boarded at an earlier shelter). People scanned after it parked are boarding for the next trip and do
+   * not count. Zero while the bus is on the road. A konduktor must complete this ride before dispatching again.
+   */
+  async unfinishedRide(db: SQLExecutor, busId: string): Promise<{ passengers: number; tickets: number }> {
+    const rows = await db.query<{ passengers: number; tickets: number }>(
+      `SELECT COALESCE(SUM(t.quantity), 0)::int AS passengers, count(*)::int AS tickets
+         FROM bus_availability av
+         JOIN scans s ON s.bus_id = av.bus_id
+         JOIN tickets t ON t.id = s.ticket_id
+        WHERE av.bus_id = $1 AND av.status = 'available'
+          AND s.result = 'valid'
+          AND s.scanned_at < av.parked_at
+          AND s.scanned_at > COALESCE((SELECT max(completed_at) FROM ride_completions WHERE bus_id = $1), '-infinity'::timestamptz)`,
+      [busId],
+    );
+    return rows[0]!;
+  },
+
   /** Completes the ride: records how many were on board and starts the next count from zero. One statement, so the count and the mark agree. */
   async completeRide(db: SQLExecutor, busId: string, konduktorId: string): Promise<{ passengers: number; tickets: number; completed_at: Date }> {
     const rows = await db.query<{ passengers: number; tickets: number; completed_at: Date }>(

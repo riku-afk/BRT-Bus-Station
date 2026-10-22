@@ -41,7 +41,7 @@ const available = (overrides: Partial<MyBus> = {}): MyBus => ({
 type Call = { method: string; url: string; body: unknown };
 
 /** A fake API whose `/tracking/my-bus` answer is whatever `state.mine` currently is. */
-function fakeApi(state: { mine: MyBus; etaSeconds?: number }) {
+function fakeApi(state: { mine: MyBus; etaSeconds?: number; ride?: unknown }) {
   const calls: Call[] = [];
   const ok = (data: unknown, status = 200) => new Response(JSON.stringify({ success: true, data, timestamp: '' }), { status });
   vi.stubGlobal(
@@ -65,6 +65,7 @@ function fakeApi(state: { mine: MyBus; etaSeconds?: number }) {
         const to = { stationId: 'st-5', stationName: 'Bus Shelter S5', seconds: state.etaSeconds ?? 420 };
         return ok([{ busId: 'bus-1', next: to, destination: to }]);
       }
+      if (url === '/api/scans/ride') return ok(state.ride ?? null);
       if (url === '/api/stations') return ok(stations);
       if (url === '/api/konduktors/me') return ok({ fullName: 'Ramon Dela Cruz', employeeNo: 'KND-001', phone: null });
       return ok(null);
@@ -139,6 +140,31 @@ describe('KonduktorHomePage: my bus', () => {
     await waitFor(() => expect(calls.some((c) => c.url === '/api/tracking/my-bus/dispatch')).toBe(true));
     expect(confirm).not.toHaveBeenCalled();
     expect(calls.find((c) => c.url === '/api/tracking/my-bus/dispatch')!.body).toEqual({});
+  });
+
+  it('cannot dispatch while the ride that just ended is not completed, and says why', async () => {
+    const calls = fakeApi({
+      mine: available(),
+      ride: { passengers: 7, tickets: 3, since: null, atShelter: 'Bus Shelter S3', canComplete: true, mustCompleteBeforeDispatch: true, unfinishedPassengers: 7 },
+    });
+    renderPage();
+    expect((await screen.findByTestId('dispatch-blocked')).textContent).toContain('Complete your ride first. 7 passengers from your last trip are still counted');
+    await waitFor(() => expect((screen.getByRole('button', { name: /Dispatch bus/ }) as HTMLButtonElement).disabled).toBe(true));
+    fireEvent.click(screen.getByRole('button', { name: /Dispatch bus/ }));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(calls.some((c) => c.url === '/api/tracking/my-bus/dispatch')).toBe(false);
+  });
+
+  it('can dispatch again once the ride is completed (nothing is left to complete)', async () => {
+    fakeApi({
+      mine: available(),
+      ride: { passengers: 0, tickets: 0, since: '2026-10-20T01:30:00.000Z', atShelter: 'Bus Shelter S3', canComplete: false, mustCompleteBeforeDispatch: false, unfinishedPassengers: 0 },
+    });
+    renderPage();
+    await screen.findByRole('button', { name: /Dispatch bus/ });
+    expect(screen.queryByTestId('dispatch-blocked')).toBeNull();
+    await waitFor(() => expect((screen.getByRole('button', { name: /Dispatch bus/ }) as HTMLButtonElement).disabled).toBe(false));
   });
 
   it('can pick a nearer station instead', async () => {

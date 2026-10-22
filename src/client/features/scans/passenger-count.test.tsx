@@ -17,7 +17,7 @@ function fakeApi(initial: RideSummary) {
       const ok = (data: unknown) => new Response(JSON.stringify({ success: true, data, timestamp: '' }), { status: 200 });
       if (url === '/api/scans/ride/complete' && method === 'POST') {
         const done = { passengers: current.passengers, tickets: current.tickets, completedAt: '2026-10-20T03:00:00.000Z' };
-        current = { passengers: 0, tickets: 0, since: done.completedAt, atShelter: current.atShelter, canComplete: false };
+        current = { passengers: 0, tickets: 0, since: done.completedAt, atShelter: current.atShelter, canComplete: false, mustCompleteBeforeDispatch: false, unfinishedPassengers: 0 };
         return ok(done);
       }
       if (url === '/api/scans/ride') return ok(current);
@@ -26,7 +26,7 @@ function fakeApi(initial: RideSummary) {
   );
 }
 
-const ride = (over: Partial<RideSummary> = {}): RideSummary => ({ passengers: 7, tickets: 3, since: null, atShelter: 'Bus Shelter S3', canComplete: true, ...over });
+const ride = (over: Partial<RideSummary> = {}): RideSummary => ({ passengers: 7, tickets: 3, since: null, atShelter: 'Bus Shelter S3', canComplete: true, mustCompleteBeforeDispatch: false, unfinishedPassengers: 0, ...over });
 
 const view = (compact = false) =>
   render(

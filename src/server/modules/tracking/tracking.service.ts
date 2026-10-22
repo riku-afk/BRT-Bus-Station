@@ -16,6 +16,7 @@ import { stationsRepository } from '@modules/stations/stations.repository';
 import type { AuthContext } from '@core/types';
 import type { BusPosition, BusPositionUpdate, DispatchResult, MyBus, TrackingSnapshot, WorkerStatus } from '@shared/tracking/models';
 import { farEndIndex, groupParkedByStation, headingToId } from '@shared/tracking/stations';
+import { scansRepository } from '@modules/scans/scans.repository';
 import { ticketsRepository } from '@modules/tickets/tickets.repository';
 import { routeService } from '@modules/route/route.service';
 import { trackingRepository } from './tracking.repository';
@@ -209,6 +210,14 @@ export const trackingService = {
       // The lock makes a second tap, or a second device, wait; it then finds the bus already on the road.
       const availability = await trackingRepository.lockAvailability(tx, mine.bus_id);
       if (!availability || availability.status !== 'available' || !availability.station_id) throw notAvailable(availability?.status);
+
+      // The bus has arrived: if passengers from its last trip are still counted, the konduktor must complete that ride first.
+      const unfinished = await scansRepository.unfinishedRide(tx, mine.bus_id);
+      if (unfinished.passengers > 0) {
+        throw ApiError.conflict(
+          `Complete your ride first: ${unfinished.passengers} passenger${unfinished.passengers === 1 ? '' : 's'} from your last trip ${unfinished.passengers === 1 ? 'is' : 'are'} still counted. Tap Complete ride, then dispatch.`,
+        );
+      }
 
       const stations = await stationsRepository.list(tx, { includeInactive: false });
       const originIndex = stations.findIndex((s) => s.id === availability.station_id);

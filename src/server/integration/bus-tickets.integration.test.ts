@@ -78,6 +78,10 @@ beforeEach(async () => {
   // no earlier ticket counting against them.
   await parkBus(ids.bus1!, st[0]!);
   await parkBus(ids.bus2!, st[0]!);
+  // Passengers scanned by an earlier test would now count as a finished trip that was never completed, and a bus cannot be dispatched
+  // until that ride is completed: complete it, as the konduktor would (nothing to complete is a harmless 409).
+  await kond1.call('POST', '/scans/ride/complete');
+  await kond2.call('POST', '/scans/ride/complete');
 });
 
 afterAll(async () => {
