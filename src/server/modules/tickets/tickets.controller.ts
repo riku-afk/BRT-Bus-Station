@@ -1,9 +1,21 @@
 import { createRoute } from '@hono/zod-openapi';
 import { createOpenAPIApp } from '@lib/openapi';
+import { pageParams, PageQuery, pagedResponse } from '@lib/pagination';
 import { apiResponse } from '@lib/response';
 import { authorize } from '@middleware/auth.middleware';
 import { paymentsService } from '@modules/payments/payments.service';
-import { CheckoutResponse, CreateTicketBody, EmailSentResponse, IdParam, PaymentStatusResponse, TicketListResponse, TicketResponse } from './tickets.schema';
+import {
+  CheckoutResponse,
+  CreateTicketBody,
+  EmailSentResponse,
+  IdParam,
+  ManualTicketBody,
+  ManualTicketResponse,
+  ManualTicketView,
+  PaymentStatusResponse,
+  TicketListResponse,
+  TicketResponse,
+} from './tickets.schema';
 import { ticketsService } from './tickets.service';
 
 const json = <T extends object>(schema: T) => ({ content: { 'application/json': { schema } } });
@@ -74,7 +86,42 @@ const paymentRoute = createRoute({
   responses: { 200: { description: 'Payment status', ...json(PaymentStatusResponse) } },
 });
 
+const manualCreateRoute = createRoute({
+  method: 'post',
+  path: '/manual-tickets',
+  tags: ['Tickets'],
+  summary: 'Sell a ticket over the counter: created paid, with the fare from the stations (admin)',
+  security,
+  request: { body: { ...json(ManualTicketBody), required: true } },
+  responses: { 201: { description: 'Created and paid', ...json(ManualTicketResponse) } },
+});
+const manualListRoute = createRoute({
+  method: 'get',
+  path: '/manual-tickets',
+  tags: ['Tickets'],
+  summary: 'The tickets sold over the counter, newest first, 10 a page (admin)',
+  security,
+  request: { query: PageQuery },
+  responses: { 200: { description: 'A page of manual tickets', ...json(pagedResponse(ManualTicketView)) } },
+});
+
 export const ticketsController = createOpenAPIApp()
+  .openapi(manualCreateRoute, async (c) => {
+    const auth = authorize(c, 'admin');
+    const body = c.req.valid('json');
+    const ticket = await ticketsService.createManual({
+      adminId: auth.user.id,
+      originId: body.originId,
+      destinationId: body.destinationId,
+      quantity: body.quantity,
+      passengerName: body.passengerName || null,
+    });
+    return c.json(apiResponse(ticket), 201);
+  })
+  .openapi(manualListRoute, async (c) => {
+    authorize(c, 'admin');
+    return c.json(apiResponse(await ticketsService.listManual(pageParams(c.req.valid('query')))), 200);
+  })
   .openapi(createTicketRoute, async (c) => {
     const auth = authorize(c, 'passenger');
     const body = c.req.valid('json');
@@ -132,4 +179,11 @@ export const ticketsController = createOpenAPIApp()
       'Cache-Control': 'private, no-store',
       'Content-Disposition': 'inline; filename="pay-qrph.png"',
     });
+  })
+  // The QR of a manual ticket as a PNG (a plain route, like the passenger's).
+  .get('/manual-tickets/:id/qr.png', async (c) => {
+    authorize(c, 'admin');
+    const { id } = IdParam.parse({ id: c.req.param('id') });
+    const png = await ticketsService.manualQr(id);
+    return c.body(new Uint8Array(png), 200, { 'Content-Type': 'image/png', 'Cache-Control': 'private, no-store', 'Content-Disposition': 'inline; filename="ticket-qr.png"' });
   });

@@ -30,6 +30,16 @@ export const CreateTicketBody = z.union([
 ]);
 export const IdParam = z.object({ id: z.uuid() });
 
+/** An admin's over-the-counter sale: where, how many, and optionally who. The fare is never accepted from the request. */
+export const ManualTicketBody = z.object({
+  originId: z.uuid(),
+  destinationId: z.uuid(),
+  quantity: z.number().int().min(1).max(MAX_TICKET_QUANTITY).default(1),
+  passengerName: z.string().trim().max(80).optional(),
+});
+export const ManualTicketView = TicketView.extend({ passengerName: z.string().nullable(), encodedByName: z.string().nullable() });
+export const ManualTicketResponse = z.object({ success: z.literal(true), data: ManualTicketView, timestamp: z.string() });
+
 export const TicketResponse = z.object({ success: z.literal(true), data: TicketView, timestamp: z.string() });
 export const TicketListResponse = z.object({ success: z.literal(true), data: z.array(TicketView), timestamp: z.string() });
 

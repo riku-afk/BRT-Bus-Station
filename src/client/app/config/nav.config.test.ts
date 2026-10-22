@@ -29,7 +29,7 @@ describe('the admin menu', () => {
     const items = navFor('admin');
     expect(items.filter((i) => !i.group).map((i) => i.label)).toEqual(['Overview']);
     expect(items.filter((i) => i.group === 'operations').map((i) => i.label)).toEqual(['Live map', 'Map', 'Stations', 'Buses', 'Konduktors']);
-    expect(items.filter((i) => i.group === 'revenue').map((i) => i.label)).toEqual(['Fares', 'Payments', 'Scans']);
+    expect(items.filter((i) => i.group === 'revenue').map((i) => i.label)).toEqual(['Fares', 'Manual tickets', 'Payments', 'Scans']);
     expect(items.every((i) => i.tone)).toBe(true);
     // Amber needs dark ink to stay readable.
     expect(items.find((i) => i.label === 'Scans')?.ink).toBe('#1c1203');

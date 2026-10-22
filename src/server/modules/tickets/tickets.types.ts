@@ -20,6 +20,9 @@ export type TicketRow = {
   quantity: number;
 };
 
+/** A ticket sold over the counter by an admin (update 018), with who it was sold to and who sold it. */
+export type ManualTicketRow = TicketRow & { passenger_name: string | null; encoded_by_name: string | null };
+
 /** A ticket as the API returns it. Bought on a bus, it is for that bus only (SCN-09); `busId` is null for a ticket with no bus. */
 export type TicketView = {
   id: string;
@@ -42,3 +45,5 @@ export type TicketView = {
   /** While awaiting payment: when the ticket expires if it is not paid. */
   payBeforeAt: string | null;
 };
+
+export type ManualTicketView = TicketView & { passengerName: string | null; encodedByName: string | null };

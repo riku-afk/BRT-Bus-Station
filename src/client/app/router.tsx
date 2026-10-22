@@ -9,6 +9,7 @@ import { LoginPage } from '@/pages/auth/login-page';
 import { RegisterPage } from '@/pages/auth/register-page';
 import { AdminBusesPage } from '@/pages/admin/admin-buses-page';
 import { AdminFaresPage } from '@/pages/admin/admin-fares-page';
+import { AdminManualTicketsPage } from '@/pages/admin/admin-manual-tickets-page';
 import { AdminPaymentsPage } from '@/pages/admin/admin-payments-page';
 import { AdminLivePage } from '@/pages/admin/admin-live-page';
 import { AdminKonduktorsPage } from '@/pages/admin/admin-konduktors-page';
@@ -47,6 +48,7 @@ export function AppRouterProvider() {
           <Route path="admin/live" element={<RequireRole roles={['admin']}><AdminLivePage /></RequireRole>} />
           <Route path="admin/payments" element={<RequireRole roles={['admin']}><AdminPaymentsPage /></RequireRole>} />
           <Route path="admin/fares" element={<RequireRole roles={['admin']}><AdminFaresPage /></RequireRole>} />
+          <Route path="admin/manual-tickets" element={<RequireRole roles={['admin']}><AdminManualTicketsPage /></RequireRole>} />
           <Route path="admin/scans" element={<RequireRole roles={['admin']}><AdminScansPage /></RequireRole>} />
           {/* New routes go here, above the catch-all. */}
           <Route path="*" element={<NotFoundPage />} />

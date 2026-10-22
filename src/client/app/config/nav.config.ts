@@ -3,7 +3,7 @@
  * Add an entry here when a role gets a new page (route lives in app/router.tsx).
  */
 import type { LucideIcon } from 'lucide-react';
-import { Bus, CreditCard, History, LayoutDashboard, Map as MapIcon, MapPin, Radio, ScanLine, Tag, Ticket, Users } from 'lucide-react';
+import { Bus, CreditCard, History, LayoutDashboard, Map as MapIcon, MapPin, Radio, ScanLine, Tag, Ticket, TicketPlus, Users } from 'lucide-react';
 import type { Role } from '@shared/rbac/roles';
 
 export type NavGroup = 'operations' | 'revenue';
@@ -38,6 +38,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Buses', to: '/admin/buses', icon: Bus, roles: ['admin'], group: 'operations', tone: '#c2410c' },
   { label: 'Konduktors', to: '/admin/konduktors', icon: Users, roles: ['admin'], group: 'operations', tone: '#7c3aed' },
   { label: 'Fares', to: '/admin/fares', icon: Tag, roles: ['admin'], group: 'revenue', tone: '#be185d' },
+  { label: 'Manual tickets', to: '/admin/manual-tickets', icon: TicketPlus, roles: ['admin'], group: 'revenue', tone: '#0e7490' },
   { label: 'Payments', to: '/admin/payments', icon: CreditCard, roles: ['admin'], group: 'revenue', tone: '#15803d' },
   { label: 'Scans', to: '/admin/scans', icon: ScanLine, roles: ['admin'], group: 'revenue', tone: '#f59e0b', ink: DARK_INK },
 ];

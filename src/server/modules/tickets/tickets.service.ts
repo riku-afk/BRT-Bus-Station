@@ -14,7 +14,7 @@ import { endOfManilaDay } from '@shared/datetime/ph-time';
 import { clampPage, offsetOf, toPage } from '@shared/pagination';
 import { MAX_PENDING_TICKETS_PER_PASSENGER, TICKET_FILTERS, TICKET_STATUS_LABEL, TICKET_TRANSACTIONS_DAYS, type TicketFilter } from '@shared/tickets/status';
 import { ticketsRepository } from './tickets.repository';
-import type { TicketRow, TicketView } from './tickets.types';
+import type { ManualTicketRow, ManualTicketView, TicketRow, TicketView } from './tickets.types';
 
 export function toTicketView(row: TicketRow): TicketView {
   return {
@@ -35,6 +35,10 @@ export function toTicketView(row: TicketRow): TicketView {
     busName: row.bus_name,
     payBeforeAt: row.status === 'pending_payment' ? new Date(row.created_at.getTime() + env.tickets.pendingTtlMinutes * 60_000).toISOString() : null,
   };
+}
+
+function toManualView(row: ManualTicketRow): ManualTicketView {
+  return { ...toTicketView(row), passengerName: row.passenger_name, encodedByName: row.encoded_by_name };
 }
 
 const MAX_CODE_ATTEMPTS = 6;
@@ -123,6 +127,49 @@ export const ticketsService = {
       }
     }
     throw new Error('Could not generate a unique ticket reference');
+  },
+
+  /**
+   * An admin sells a ticket over the counter (cash): it is created PAID at once, for the fare the stations give (never typed in), and its
+   * QR code is handed over on paper or by download. The admin is recorded as who sold it. One QR code admits everyone on the ticket, once.
+   */
+  async createManual(input: { adminId: string; originId: string; destinationId: string; quantity: number; passengerName: string | null }): Promise<ManualTicketView> {
+    const quote = await faresService.quote(input.originId, input.destinationId);
+    const db = getDb();
+    for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
+      try {
+        const id = await ticketsRepository.insertManualPaid(db, {
+          referenceCode: generateReferenceCode(),
+          adminId: input.adminId,
+          originId: input.originId,
+          destinationId: input.destinationId,
+          fareCentavos: quote.fareCentavos * input.quantity,
+          quantity: input.quantity,
+          passengerName: input.passengerName,
+        });
+        return toManualView((await ticketsRepository.findManualById(db, id))!);
+      } catch (err) {
+        if (isUniqueViolation(err)) continue;
+        throw err;
+      }
+    }
+    throw new Error('Could not generate a unique ticket reference');
+  },
+
+  async listManual(query: { page: number; pageSize: number }) {
+    const db = getDb();
+    const total = await ticketsRepository.countManual(db);
+    const page = clampPage(query.page, total, query.pageSize);
+    const rows = await ticketsRepository.listManualPage(db, { limit: query.pageSize, offset: offsetOf(page, query.pageSize) });
+    return toPage(rows.map(toManualView), total, page, query.pageSize);
+  },
+
+  /** The QR code of a manual ticket, for the admin to print or download. Only while it is paid (a used or expired ticket has none). */
+  async manualQr(ticketId: string): Promise<Buffer> {
+    const row = await ticketsRepository.findManualById(getDb(), ticketId);
+    if (!row) throw ApiError.notFound('Ticket not found');
+    if (row.status !== 'paid') throw ApiError.conflict(`This ticket is ${TICKET_STATUS_LABEL[row.status].toLowerCase()}: a QR code is only available while it is paid`);
+    return qrPng(signTicketToken(row.id));
   },
 
   /** Email the owner their paid ticket again. Own tickets only, paid only, and not more often than once a minute per ticket. */

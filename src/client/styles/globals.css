@@ -277,3 +277,31 @@
 .sw:checked::after { left: 20px; }
 .sw:focus-visible { outline: 2px solid var(--sw-on, #4f46e5); outline-offset: 2px; }
 .sw:disabled { opacity: 0.5; cursor: default; }
+
+/* Printing a ticket (admin, Manual tickets): only the ticket slip is printed, black on white, whatever theme the screen is in. */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  .print-slip,
+  .print-slip * {
+    visibility: visible !important;
+  }
+  .print-slip {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    width: 90mm;
+    max-width: 100%;
+    border: 1px solid #000 !important;
+    border-radius: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    box-shadow: none !important;
+  }
+  .print-slip dt,
+  .print-slip span,
+  .print-slip p {
+    color: #000 !important;
+  }
+}

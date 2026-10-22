@@ -1,7 +1,17 @@
 /** SQL only. Every status change is a conditional UPDATE guarded by the status machine in `@shared/tickets/status`. */
 import type { SQLExecutor } from '@core/database';
 import { assertTransition } from '@shared/tickets/status';
-import type { TicketRow } from './tickets.types';
+import type { ManualTicketRow, TicketRow } from './tickets.types';
+
+const MANUAL_SELECT = `
+  SELECT t.id, t.reference_code, t.passenger_id, t.origin_station_id, so.name AS origin_name,
+         t.destination_station_id, sd.name AS destination_name, t.fare_centavos, t.status,
+         t.valid_until, t.paid_at, t.used_at, t.created_at, t.bus_id, t.bus_name, t.quantity,
+         t.passenger_name, eu.full_name AS encoded_by_name
+    FROM tickets t
+    JOIN stations so ON so.id = t.origin_station_id
+    JOIN stations sd ON sd.id = t.destination_station_id
+    LEFT JOIN users eu ON eu.id = t.encoded_by`;
 
 const SELECT = `
   SELECT t.id, t.reference_code, t.passenger_id, t.origin_station_id, so.name AS origin_name,
@@ -71,6 +81,39 @@ export const ticketsRepository = {
       [input.referenceCode, input.passengerId, input.originId, input.destinationId, input.fareCentavos, input.validUntil, input.maxPending, input.busId ?? null, input.busName ?? null, input.quantity ?? 1],
     );
     return rows[0]?.id ?? null;
+  },
+
+  /**
+   * A ticket sold over the counter (update 018): created already PAID, valid to the end of today (Manila), like an online one after
+   * its payment lands. This is the only other way a ticket becomes paid, and only an admin reaches it. Returns the new id; a unique
+   * violation on `reference_code` is thrown for the caller to retry with a new code.
+   */
+  async insertManualPaid(
+    db: SQLExecutor,
+    input: { referenceCode: string; adminId: string; originId: string; destinationId: string; fareCentavos: number; quantity: number; passengerName: string | null },
+  ): Promise<string> {
+    const rows = await db.query<{ id: string }>(
+      `INSERT INTO tickets (reference_code, passenger_id, origin_station_id, destination_station_id, fare_centavos, quantity, status, paid_at, valid_until, source, passenger_name, encoded_by)
+       VALUES ($1, $2, $3, $4, $5, $6, 'paid', now(), ${END_OF_MANILA_DAY}, 'manual', $7, $2)
+       RETURNING id`,
+      [input.referenceCode, input.adminId, input.originId, input.destinationId, input.fareCentavos, input.quantity, input.passengerName],
+    );
+    return rows[0]!.id;
+  },
+
+  async findManualById(db: SQLExecutor, id: string): Promise<ManualTicketRow | null> {
+    const rows = await db.query<ManualTicketRow>(`${MANUAL_SELECT} WHERE t.id = $1 AND t.source = 'manual'`, [id]);
+    return rows[0] ?? null;
+  },
+
+  async countManual(db: SQLExecutor): Promise<number> {
+    const rows = await db.query<{ n: number }>("SELECT count(*)::int AS n FROM tickets WHERE source = 'manual'");
+    return rows[0]?.n ?? 0;
+  },
+
+  /** One page of the manual tickets, newest first. */
+  listManualPage(db: SQLExecutor, opts: { limit: number; offset: number }): Promise<ManualTicketRow[]> {
+    return db.query<ManualTicketRow>(`${MANUAL_SELECT} WHERE t.source = 'manual' ORDER BY t.created_at DESC, t.id LIMIT $1 OFFSET $2`, [opts.limit, opts.offset]);
   },
 
   /**
