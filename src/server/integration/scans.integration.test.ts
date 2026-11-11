@@ -162,7 +162,7 @@ describe('scanning a ticket (SCN-02, SCN-03, SCN-05)', () => {
     const t = await paidTicket(pax1, 0, 2);
     const res = await scan(kond1, { token: t.token });
     expect(res).toMatchObject({ result: 'valid', reason: null, message: 'Valid ticket' });
-    expect(res.ticket).toEqual({ referenceCode: t.code, originName: 'A', destinationName: 'C', fareCentavos: 1900, quantity: 1 });
+    expect(res.ticket).toEqual({ referenceCode: t.code, originName: 'A', destinationName: 'C', fareCentavos: 1900, quantity: 1, discountType: null, discountId: null });
     expect((await ticketRow(t.id)).status).toBe('used');
     expect((await ticketRow(t.id)).used_at).not.toBeNull();
     // The konduktor is not told who the passenger is.

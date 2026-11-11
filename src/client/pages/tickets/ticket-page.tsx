@@ -1,3 +1,4 @@
+import { DiscountNote } from '@/features/fares/discount-badge';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Bus, CheckCircle2, Clock, Download, Loader2, Mail, XCircle, type LucideIcon } from 'lucide-react';
@@ -224,12 +225,14 @@ export function TicketPage() {
               <div className="flex flex-col gap-0.5 rounded-[14px] px-3.5 py-3" style={{ background: 'color-mix(in srgb, #be185d 10%, var(--surface))' }}>
                 <span className="text-xs font-semibold text-muted-foreground">{ticket.quantity > 1 ? 'Total fare' : 'Fare'}</span>
                 <span className="text-xl font-extrabold">{formatPeso(ticket.fareCentavos)}</span>
+                {ticket.discountType && ticket.discountCentavos ? <DiscountNote type={ticket.discountType} discountCentavos={ticket.discountCentavos} quantity={ticket.quantity} /> : null}
               </div>
               {ticket.quantity > 1 && (
                 <div className="flex flex-col gap-0.5 rounded-[14px] px-3.5 py-3" style={{ background: 'color-mix(in srgb, #0369a1 10%, var(--surface))' }}>
                   <span className="text-xs font-semibold text-muted-foreground">Passengers</span>
                   <span className="text-xl font-extrabold" data-testid="ticket-passengers">
-                    {ticket.quantity} ({formatPeso(Math.round(ticket.fareCentavos / ticket.quantity))} each)
+                    {ticket.quantity}
+                    {ticket.discountCentavos ? '' : ` (${formatPeso(Math.round(ticket.fareCentavos / ticket.quantity))} each)`}
                   </span>
                 </div>
               )}

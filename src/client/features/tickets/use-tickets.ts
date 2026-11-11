@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '@/lib/api/client';
 import { errorMessage } from '@/features/auth/use-auth';
+import type { DiscountType } from '@shared/fares/discount';
 import type { TicketStatus } from '@shared/tickets/status';
 
 export type Ticket = {
@@ -24,6 +25,9 @@ export type Ticket = {
   busName: string | null;
   /** While awaiting payment: when the ticket expires if unpaid. */
   payBeforeAt: string | null;
+  /** The Senior Citizen / PWD discount applied (20% off the ID holder's fare) and how much it took off the total. Absent or null: none. */
+  discountType?: DiscountType | null;
+  discountCentavos?: number;
 };
 
 export type Checkout = { paymentId: string; ticketId: string; provider: 'mock' | 'pisopay'; amountCentavos: number; checkoutUrl: string; hasQr: boolean };

@@ -198,7 +198,7 @@ async function record(
     reason,
     message: scanMessage(result, reason, usedAt, where),
     ticket: ticket
-      ? { referenceCode: ticket.reference_code, originName: ticket.origin_name, destinationName: ticket.destination_name, fareCentavos: ticket.fare_centavos, quantity: ticket.quantity }
+      ? { referenceCode: ticket.reference_code, originName: ticket.origin_name, destinationName: ticket.destination_name, fareCentavos: ticket.fare_centavos, quantity: ticket.quantity, discountType: ticket.discount_type, discountId: ticket.discount_id }
       : null,
     usedAt,
     scannedAt: stored.scannedAt.toISOString(),

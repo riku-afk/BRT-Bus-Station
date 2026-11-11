@@ -7,7 +7,7 @@ const base: ScanResponse = {
   result: 'valid',
   reason: null,
   message: 'Valid ticket',
-  ticket: { referenceCode: 'BRT-ABC234', originName: 'Bus Shelter S3', destinationName: 'Bus Shelter S12', fareCentavos: 3500, quantity: 1 },
+  ticket: { referenceCode: 'BRT-ABC234', originName: 'Bus Shelter S3', destinationName: 'Bus Shelter S12', fareCentavos: 3500, quantity: 1, discountType: null, discountId: null },
   usedAt: null,
   scannedAt: '2026-10-16T02:00:00.000Z',
 };
@@ -78,5 +78,36 @@ describe('ScanResultScreen', () => {
     render(<ScanResultScreen result={base} onNext={next} />);
     fireEvent.click(screen.getByRole('button', { name: /scan next/i }));
     expect(next).toHaveBeenCalledOnce();
+  });
+});
+
+describe('ScanResultScreen: Senior Citizen / PWD tickets', () => {
+  it("tells the konduktor to check the holder's ID, with the number to match", () => {
+    render(<ScanResultScreen result={{ ...base, ticket: { ...base.ticket!, discountType: 'senior', discountId: 'OSCA-0001234' } }} onNext={() => {}} />);
+    const note = screen.getByTestId('check-id');
+    expect(note.textContent).toContain("Senior Citizen discount: check the holder's ID");
+    expect(note.textContent).toContain('OSCA-0001234');
+  });
+
+  it('says PWD for a PWD ticket, and says nothing for a ticket without a discount or one that was refused', () => {
+    render(<ScanResultScreen result={{ ...base, ticket: { ...base.ticket!, discountType: 'pwd', discountId: 'PWD-9' } }} onNext={() => {}} />);
+    expect(screen.getByTestId('check-id').textContent).toContain('PWD discount');
+    cleanup();
+    render(<ScanResultScreen result={base} onNext={() => {}} />);
+    expect(screen.queryByTestId('check-id')).toBeNull();
+    cleanup();
+    render(<ScanResultScreen result={{ ...base, result: 'already_used', message: 'Already used', ticket: { ...base.ticket!, discountType: 'senior', discountId: 'X-1' } }} onNext={() => {}} />);
+    expect(screen.queryByTestId('check-id')).toBeNull();
+  });
+});
+
+describe('ScanResultScreen: a discount with no ID number to match', () => {
+  it('tells the konduktor what to ask for: any ID showing the age for a senior, the student ID for a student', () => {
+    render(<ScanResultScreen result={{ ...base, ticket: { ...base.ticket!, discountType: 'senior', discountId: null } }} onNext={() => {}} />);
+    expect(screen.getByTestId('check-id').textContent).toContain('Ask for an ID showing the age (60 or over)');
+    cleanup();
+    render(<ScanResultScreen result={{ ...base, ticket: { ...base.ticket!, discountType: 'student', discountId: null } }} onNext={() => {}} />);
+    expect(screen.getByTestId('check-id').textContent).toContain('Student discount');
+    expect(screen.getByTestId('check-id').textContent).toContain('Ask for the student ID');
   });
 });

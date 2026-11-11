@@ -19,6 +19,9 @@ const ticket = (overrides: Partial<TicketRow> = {}): TicketRow => ({
   bus_id: 'b-1',
   bus_name: 'Bus 3',
   quantity: 1,
+  discount_type: null,
+  discount_id: null,
+  discount_centavos: 0,
   ...overrides,
 });
 const qr = Buffer.from('PNG');

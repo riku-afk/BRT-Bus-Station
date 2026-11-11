@@ -1,8 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiClientError, apiGet, apiPost } from '@/lib/api/client';
+import type { DiscountType } from '@shared/fares/discount';
 import type { Role } from '@shared/rbac/roles';
 
-export type CurrentUser = { id: string; email: string; fullName: string; role: Role };
+/** `discountType`: the Senior Citizen / PWD discount this account carries (set by the partner app at sign-in), if any. */
+export type CurrentUser = { id: string; email: string; fullName: string; role: Role; discountType?: DiscountType | null };
 
 export const ME_KEY = ['auth', 'me'] as const;
 

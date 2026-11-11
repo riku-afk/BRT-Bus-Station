@@ -24,6 +24,10 @@ CREATE TABLE IF NOT EXISTS tickets (
   source                 text NOT NULL DEFAULT 'online' CHECK (source IN ('online', 'manual')),
   passenger_name         text,
   encoded_by             uuid REFERENCES users (id) ON DELETE RESTRICT,
+  -- The 20% discount applied at purchase (update 019): the kind, the ID number to check, and the centavos taken off.
+  discount_type          text CHECK (discount_type IN ('senior', 'pwd', 'student')),
+  discount_id            text,
+  discount_centavos      integer NOT NULL DEFAULT 0 CHECK (discount_centavos >= 0),
   CONSTRAINT tickets_quantity_range CHECK (quantity BETWEEN 1 AND 20),
   CHECK (origin_station_id <> destination_station_id)
 );

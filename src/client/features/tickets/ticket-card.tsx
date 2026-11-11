@@ -1,3 +1,4 @@
+import { DiscountBadge } from '@/features/fares/discount-badge';
 import { Link } from 'react-router-dom';
 import { ArrowRight, QrCode } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -46,6 +47,7 @@ export function TicketCard({ ticket, onPay, onCancel, busy }: Props) {
         <span className="text-[13px] text-muted-foreground">
           {ticket.originName} → {ticket.destinationName}
         </span>
+        {ticket.discountType && <DiscountBadge type={ticket.discountType} className="self-start" />}
         <span className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           {/* The reference is the fallback for the konduktor: it is shown once the ticket is paid, not while it is still being bought. */}
           {(ticket.status === 'paid' || ticket.status === 'used') && (

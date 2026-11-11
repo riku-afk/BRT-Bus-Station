@@ -1,3 +1,4 @@
+import type { DiscountType } from '@shared/fares/discount';
 import type { TicketStatus } from '@shared/tickets/status';
 
 export type TicketRow = {
@@ -18,6 +19,9 @@ export type TicketRow = {
   bus_id: string | null;
   bus_name: string | null;
   quantity: number;
+  discount_type: DiscountType | null;
+  discount_id: string | null;
+  discount_centavos: number;
 };
 
 /** A ticket sold over the counter by an admin (update 018), with who it was sold to and who sold it. */
@@ -44,6 +48,9 @@ export type TicketView = {
   busName: string | null;
   /** While awaiting payment: when the ticket expires if it is not paid. */
   payBeforeAt: string | null;
+  /** The Senior Citizen / PWD discount applied, and how many centavos it took off the total (0 without one). */
+  discountType: DiscountType | null;
+  discountCentavos: number;
 };
 
-export type ManualTicketView = TicketView & { passengerName: string | null; encodedByName: string | null };
+export type ManualTicketView = TicketView & { passengerName: string | null; encodedByName: string | null; discountId: string | null };

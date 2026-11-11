@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi';
+import { DISCOUNT_TYPES } from '@shared/fares/discount';
 import { MAX_TICKET_QUANTITY, TICKET_STATUSES } from '@shared/tickets/status';
 
 export const TicketView = z.object({
@@ -18,6 +19,8 @@ export const TicketView = z.object({
   busId: z.uuid().nullable(),
   busName: z.string().nullable(),
   payBeforeAt: z.string().nullable(),
+  discountType: z.enum(DISCOUNT_TYPES).nullable(),
+  discountCentavos: z.number().int(),
 });
 
 /** The client says only WHERE. The fare is never accepted from the request (FARE-04). */
@@ -36,8 +39,11 @@ export const ManualTicketBody = z.object({
   destinationId: z.uuid(),
   quantity: z.number().int().min(1).max(MAX_TICKET_QUANTITY).default(1),
   passengerName: z.string().trim().max(80).optional(),
-});
-export const ManualTicketView = TicketView.extend({ passengerName: z.string().nullable(), encodedByName: z.string().nullable() });
+  /** The admin checked the passenger's Senior Citizen / PWD ID: which kind, and the ID number (required with a discount). */
+  discountType: z.enum(DISCOUNT_TYPES).optional(),
+  discountId: z.string().trim().min(3).max(50).optional(),
+}).refine((b) => !b.discountType || Boolean(b.discountId), { message: 'Enter the ID number shown on the Senior Citizen / PWD ID', path: ['discountId'] });
+export const ManualTicketView = TicketView.extend({ passengerName: z.string().nullable(), encodedByName: z.string().nullable(), discountId: z.string().nullable() });
 export const ManualTicketResponse = z.object({ success: z.literal(true), data: ManualTicketView, timestamp: z.string() });
 
 export const TicketResponse = z.object({ success: z.literal(true), data: TicketView, timestamp: z.string() });

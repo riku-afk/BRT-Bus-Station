@@ -14,6 +14,7 @@ import { getDb, transaction } from '@core/database';
 import { ApiError } from '@lib/response';
 import type { UserRow } from '@modules/auth/auth.types';
 import { ticketsService } from '@modules/tickets';
+import { isDiscountType, type DiscountType } from '@shared/fares/discount';
 import { toPage } from '@shared/pagination';
 import type { TicketFilter } from '@shared/tickets/status';
 import { ssoRepository } from './sso.repository';
@@ -24,7 +25,8 @@ export const SSO_PROVIDER = 'sce';
 const key = () => new TextEncoder().encode(env.sso.secret);
 const bad = (message = 'This sign-in link is not valid or has expired') => new ApiError(401, 'SSO_INVALID', message);
 
-export type SsoClaims = { sub: string; jti: string; name: string; email: string };
+/** `discount`: the Senior Citizen, PWD or Student status the partner vouches for. `discountId`: the ID number when the partner has one (a PWD ID always; a senior or student may have none). */
+export type SsoClaims = { sub: string; jti: string; name: string; email: string; discount: DiscountType | null; discountId: string | null };
 
 function claimsOf(payload: JWTPayload): SsoClaims {
   const sub = typeof payload.sub === 'string' ? payload.sub.trim() : '';
@@ -32,7 +34,9 @@ function claimsOf(payload: JWTPayload): SsoClaims {
   const name = typeof payload.name === 'string' ? payload.name.trim() : '';
   const email = typeof payload.email === 'string' ? payload.email.trim().toLowerCase() : '';
   if (!sub || sub.length > 100 || !jti || jti.length > 200) throw bad();
-  return { sub, jti, name: name.slice(0, 200), email: email.slice(0, 254) };
+  const discountId = typeof payload.discount_id === 'string' ? payload.discount_id.trim().slice(0, 50) : '';
+  const discount = isDiscountType(payload.discount) ? payload.discount : null;
+  return { sub, jti, name: name.slice(0, 200), email: email.slice(0, 254), discount, discountId: discount && discountId.length >= 3 ? discountId : null };
 }
 
 async function verify(token: string, audience: string): Promise<JWTPayload> {
@@ -67,19 +71,23 @@ export const ssoService = {
         if (!existing.is_active) throw new ApiError(403, 'FORBIDDEN', 'This account is not active');
         if (existing.role !== 'passenger') throw new ApiError(403, 'FORBIDDEN', 'Only passenger accounts can sign in this way');
         if (claims.name) await ssoRepository.updateName(tx, existing.id, claims.name);
+        // The discount follows what the partner says today: it is given, changed or taken away at every sign-in.
+        await ssoRepository.setDiscount(tx, existing.id, claims.discount, claims.discountId);
         return existing;
       }
 
       // Never merge into an existing BRT account just because the email matches: that would be an account takeover by email.
       const email = claims.email && !(await ssoRepository.emailTaken(tx, claims.email)) ? claims.email : aliasEmail(claims.sub);
       if (await ssoRepository.emailTaken(tx, email)) throw ApiError.conflict('Could not create the account');
-      return ssoRepository.insertExternal(tx, {
+      const created = await ssoRepository.insertExternal(tx, {
         provider: SSO_PROVIDER,
         externalId: claims.sub,
         email,
         passwordHash: await bcrypt.hash(randomBytes(32).toString('hex'), 10),
         fullName: claims.name || 'Passenger',
       });
+      await ssoRepository.setDiscount(tx, created.id, claims.discount, claims.discountId);
+      return created;
     });
   },
 

@@ -11,6 +11,7 @@ import { stationsRepository } from '@modules/stations/stations.repository';
 import { headingToId } from '@shared/tracking/stations';
 import { paymentsRepository } from '@modules/payments/payments.repository';
 import { endOfManilaDay } from '@shared/datetime/ph-time';
+import { priceTicket, type DiscountType } from '@shared/fares/discount';
 import { clampPage, offsetOf, toPage } from '@shared/pagination';
 import { MAX_PENDING_TICKETS_PER_PASSENGER, TICKET_FILTERS, TICKET_STATUS_LABEL, TICKET_TRANSACTIONS_DAYS, type TicketFilter } from '@shared/tickets/status';
 import { ticketsRepository } from './tickets.repository';
@@ -34,11 +35,13 @@ export function toTicketView(row: TicketRow): TicketView {
     busId: row.bus_id,
     busName: row.bus_name,
     payBeforeAt: row.status === 'pending_payment' ? new Date(row.created_at.getTime() + env.tickets.pendingTtlMinutes * 60_000).toISOString() : null,
+    discountType: row.discount_type,
+    discountCentavos: row.discount_centavos,
   };
 }
 
 function toManualView(row: ManualTicketRow): ManualTicketView {
-  return { ...toTicketView(row), passengerName: row.passenger_name, encodedByName: row.encoded_by_name };
+  return { ...toTicketView(row), passengerName: row.passenger_name, encodedByName: row.encoded_by_name, discountId: row.discount_id };
 }
 
 const MAX_CODE_ATTEMPTS = 6;
@@ -56,6 +59,9 @@ export const ticketsService = {
     // Validates both stations (exist, in service, different) and prices the trip.
     const quote = await faresService.quote(input.originId, input.destinationId);
     const db = getDb();
+    // The discount comes from the passenger's account, never from the request. One passenger of the group gets it (the ID holder).
+    const discount = await ticketsRepository.findDiscount(db, input.passengerId);
+    const price = priceTicket(quote.fareCentavos, quantity, discount?.type ?? null);
 
     for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
       try {
@@ -64,9 +70,12 @@ export const ticketsService = {
           passengerId: input.passengerId,
           originId: input.originId,
           destinationId: input.destinationId,
-          // The total for everyone on the ticket: one fare per passenger, frozen now (FARE-04).
-          fareCentavos: quote.fareCentavos * quantity,
+          // The total for everyone on the ticket: one fare per passenger less the ID holder's discount, frozen now (FARE-04).
+          fareCentavos: price.totalCentavos,
           quantity,
+          discountType: discount?.type ?? null,
+          discountId: discount?.id ?? null,
+          discountCentavos: price.discountCentavos,
           // Placeholder: the real validity is set when the payment lands, to the end of that day.
           validUntil: endOfManilaDay(new Date()),
           maxPending: MAX_PENDING_TICKETS_PER_PASSENGER,
@@ -104,14 +113,19 @@ export const ticketsService = {
           const destinationId = headingToId(stations.map((s) => s.id), bus.station_id, bus.planned_destination_id);
           if (!destinationId) throw ApiError.conflict('This bus has no destination yet. Please try again in a moment.');
           const quote = await faresService.quote(bus.station_id, destinationId);
+          const discount = await ticketsRepository.findDiscount(tx, input.passengerId);
+          const price = priceTicket(quote.fareCentavos, quantity, discount?.type ?? null);
 
           const created = await ticketsRepository.insertPending(tx, {
             referenceCode: generateReferenceCode(),
             passengerId: input.passengerId,
             originId: bus.station_id,
             destinationId,
-            fareCentavos: quote.fareCentavos * quantity,
+            fareCentavos: price.totalCentavos,
             quantity,
+            discountType: discount?.type ?? null,
+            discountId: discount?.id ?? null,
+            discountCentavos: price.discountCentavos,
             validUntil: endOfManilaDay(new Date()),
             maxPending: MAX_PENDING_TICKETS_PER_PASSENGER,
             busId: bus.id,
@@ -133,8 +147,18 @@ export const ticketsService = {
    * An admin sells a ticket over the counter (cash): it is created PAID at once, for the fare the stations give (never typed in), and its
    * QR code is handed over on paper or by download. The admin is recorded as who sold it. One QR code admits everyone on the ticket, once.
    */
-  async createManual(input: { adminId: string; originId: string; destinationId: string; quantity: number; passengerName: string | null }): Promise<ManualTicketView> {
+  async createManual(input: {
+    adminId: string;
+    originId: string;
+    destinationId: string;
+    quantity: number;
+    passengerName: string | null;
+    discountType: DiscountType | null;
+    discountId: string | null;
+  }): Promise<ManualTicketView> {
     const quote = await faresService.quote(input.originId, input.destinationId);
+    // The admin has looked at the printed ID: it must be named when a discount is given, and only one passenger of the group gets it.
+    const price = priceTicket(quote.fareCentavos, input.quantity, input.discountType);
     const db = getDb();
     for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
       try {
@@ -143,9 +167,12 @@ export const ticketsService = {
           adminId: input.adminId,
           originId: input.originId,
           destinationId: input.destinationId,
-          fareCentavos: quote.fareCentavos * input.quantity,
+          fareCentavos: price.totalCentavos,
           quantity: input.quantity,
           passengerName: input.passengerName,
+          discountType: input.discountType,
+          discountId: input.discountType ? input.discountId : null,
+          discountCentavos: price.discountCentavos,
         });
         return toManualView((await ticketsRepository.findManualById(db, id))!);
       } catch (err) {

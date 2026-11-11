@@ -1,3 +1,4 @@
+import type { DiscountType } from '../fares/discount';
 /** Scan contracts shared by the API and the konduktor / admin screens. Browser-safe. */
 import { formatManilaTime } from '../datetime/ph-time';
 import type { Page } from '../pagination';
@@ -9,7 +10,17 @@ export type ScanResult = (typeof SCAN_RESULTS)[number];
 export type ScanReason = 'bad_token' | 'bad_code' | 'unknown_ticket' | 'not_paid' | 'cancelled' | 'wrong_station' | 'wrong_bus' | 'bus_not_at_station';
 
 /** What the konduktor needs to know about the ticket: where the passenger gets off (SCN-05). Never who the passenger is. */
-export type ScanTicketInfo = { referenceCode: string; originName: string; destinationName: string; fareCentavos: number; /** Passengers this ticket admits. */ quantity: number };
+export type ScanTicketInfo = {
+  referenceCode: string;
+  originName: string;
+  destinationName: string;
+  fareCentavos: number;
+  /** Passengers this ticket admits. */
+  quantity: number;
+  /** A Senior Citizen / PWD ticket: the konduktor checks the holder's printed ID against this number before they board. */
+  discountType: DiscountType | null;
+  discountId: string | null;
+};
 
 export type ScanResponse = {
   result: ScanResult;

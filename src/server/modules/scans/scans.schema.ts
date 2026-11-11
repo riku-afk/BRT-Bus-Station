@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi';
+import { DISCOUNT_TYPES } from '@shared/fares/discount';
 import { PageQuery, pagedResponse } from '@lib/pagination';
 import { SCAN_RESULTS } from '@shared/scans/models';
 
@@ -18,7 +19,7 @@ export const ScanResponse = z.object({
     result: z.enum(SCAN_RESULTS),
     reason,
     message: z.string(),
-    ticket: z.object({ referenceCode: z.string(), originName: z.string(), destinationName: z.string(), fareCentavos: z.number().int(), quantity: z.number().int() }).nullable(),
+    ticket: z.object({ referenceCode: z.string(), originName: z.string(), destinationName: z.string(), fareCentavos: z.number().int(), quantity: z.number().int(), discountType: z.enum(DISCOUNT_TYPES).nullable(), discountId: z.string().nullable() }).nullable(),
     usedAt: z.string().nullable(),
     scannedAt: z.string(),
   }),

@@ -41,7 +41,7 @@ export const scansRepository = {
   /** The ticket row is locked, so two scans of one ticket take turns and the second sees what the first did. */
   async lockTicket(db: SQLExecutor, ticketId: string): Promise<ScannedTicket | null> {
     const rows = await db.query<ScannedTicket>(
-      `SELECT t.id, t.origin_station_id, t.bus_id, t.bus_name, t.status, t.reference_code, so.name AS origin_name, sd.name AS destination_name, t.fare_centavos, t.quantity, t.used_at,
+      `SELECT t.id, t.origin_station_id, t.bus_id, t.bus_name, t.status, t.reference_code, so.name AS origin_name, sd.name AS destination_name, t.fare_centavos, t.quantity, t.discount_type, t.discount_id, t.used_at,
             (t.valid_until < now()) AS lapsed
          FROM tickets t
          JOIN stations so ON so.id = t.origin_station_id
@@ -55,7 +55,7 @@ export const scansRepository = {
   /** Re-read after the ticket changed state inside this transaction. */
   async readTicket(db: SQLExecutor, ticketId: string): Promise<ScannedTicket | null> {
     const rows = await db.query<ScannedTicket>(
-      `SELECT t.id, t.origin_station_id, t.bus_id, t.bus_name, t.status, t.reference_code, so.name AS origin_name, sd.name AS destination_name, t.fare_centavos, t.quantity, t.used_at
+      `SELECT t.id, t.origin_station_id, t.bus_id, t.bus_name, t.status, t.reference_code, so.name AS origin_name, sd.name AS destination_name, t.fare_centavos, t.quantity, t.discount_type, t.discount_id, t.used_at
          FROM tickets t
          JOIN stations so ON so.id = t.origin_station_id
          JOIN stations sd ON sd.id = t.destination_station_id

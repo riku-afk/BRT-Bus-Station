@@ -17,7 +17,7 @@ const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', BCRYPT_COST);
 export const SESSION_COOKIE = 'brt_session';
 
 export function toView(user: UserRow): UserView {
-  return { id: user.id, email: user.email, fullName: user.full_name, role: user.role };
+  return { id: user.id, email: user.email, fullName: user.full_name, role: user.role, discountType: user.discount_type ?? null };
 }
 
 export function toAuthUser(user: UserRow): AuthUser {

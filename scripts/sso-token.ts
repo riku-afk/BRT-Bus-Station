@@ -2,9 +2,11 @@
  * Development helper: play the part of the partner backend and print a hand-off link, so the whole SSO flow can be tried
  * without the Smart City app.
  *
- *   bun run scripts/sso-token.ts [citizenId] [--name "Juan Dela Cruz"] [--email juan@example.com] [--next /tickets] [--api]
+ *   bun run scripts/sso-token.ts [citizenId] [--name "Juan Dela Cruz"] [--email juan@example.com] [--next /tickets] [--discount senior|pwd --discount-id OSCA-1234] [--api]
  *
  * Needs SSO_ENABLED=true and SSO_SHARED_SECRET in .env (the same secret the partner backend signs with).
+ * --discount / --discount-id play a citizen with a Senior Citizen or PWD ID (20% off one fare). Both are needed: the ID number is what
+ * the konduktor checks. Leave them out to play a citizen without one.
  * With --api it prints the server-to-server token for GET /api/partner/tickets instead.
  */
 import { SignJWT } from 'jose';
@@ -27,7 +29,21 @@ if (env.appEnv === 'prod') {
 }
 
 const api = args.includes('--api');
-const token = await new SignJWT({ name: flag('name') ?? 'Demo Citizen', email: flag('email') ?? `citizen${citizenId}@sce.test` })
+const discount = flag('discount');
+const discountId = flag('discount-id');
+if (discount && !['senior', 'pwd'].includes(discount)) {
+  console.error('--discount must be senior or pwd.');
+  process.exit(1);
+}
+if (Boolean(discount) !== Boolean(discountId)) {
+  console.error('--discount and --discount-id go together (the ID number is what the konduktor checks).');
+  process.exit(1);
+}
+const token = await new SignJWT({
+  name: flag('name') ?? 'Demo Citizen',
+  email: flag('email') ?? `citizen${citizenId}@sce.test`,
+  ...(discount ? { discount, discount_id: discountId } : {}),
+})
   .setProtectedHeader({ alg: 'HS256' })
   .setSubject(citizenId)
   .setIssuer(env.sso.issuer)

@@ -1,5 +1,6 @@
 /** SQL only. Every status change is a conditional UPDATE guarded by the status machine in `@shared/tickets/status`. */
 import type { SQLExecutor } from '@core/database';
+import type { DiscountType } from '@shared/fares/discount';
 import { assertTransition } from '@shared/tickets/status';
 import type { ManualTicketRow, TicketRow } from './tickets.types';
 
@@ -7,6 +8,7 @@ const MANUAL_SELECT = `
   SELECT t.id, t.reference_code, t.passenger_id, t.origin_station_id, so.name AS origin_name,
          t.destination_station_id, sd.name AS destination_name, t.fare_centavos, t.status,
          t.valid_until, t.paid_at, t.used_at, t.created_at, t.bus_id, t.bus_name, t.quantity,
+         t.discount_type, t.discount_id, t.discount_centavos,
          t.passenger_name, eu.full_name AS encoded_by_name
     FROM tickets t
     JOIN stations so ON so.id = t.origin_station_id
@@ -16,7 +18,8 @@ const MANUAL_SELECT = `
 const SELECT = `
   SELECT t.id, t.reference_code, t.passenger_id, t.origin_station_id, so.name AS origin_name,
          t.destination_station_id, sd.name AS destination_name, t.fare_centavos, t.status,
-         t.valid_until, t.paid_at, t.used_at, t.created_at, t.bus_id, t.bus_name, t.quantity
+         t.valid_until, t.paid_at, t.used_at, t.created_at, t.bus_id, t.bus_name, t.quantity,
+         t.discount_type, t.discount_id, t.discount_centavos
     FROM tickets t
     JOIN stations so ON so.id = t.origin_station_id
     JOIN stations sd ON sd.id = t.destination_station_id`;
@@ -25,6 +28,13 @@ const SELECT = `
 const END_OF_MANILA_DAY = "(date_trunc('day', now() AT TIME ZONE 'Asia/Manila') + interval '1 day' - interval '1 second') AT TIME ZONE 'Asia/Manila'";
 
 export const ticketsRepository = {
+  /** The discount a passenger's account carries (the partner app vouches for it at sign-in), or null. Read from the account, never from a request. */
+  async findDiscount(db: SQLExecutor, userId: string): Promise<{ type: DiscountType; id: string | null } | null> {
+    const rows = await db.query<{ discount_type: DiscountType | null; discount_id: string | null }>('SELECT discount_type, discount_id FROM users WHERE id = $1', [userId]);
+    const row = rows[0];
+    return row?.discount_type ? { type: row.discount_type, id: row.discount_id } : null;
+  },
+
   /** `forUpdate` locks the ticket row so a payment, a cancel and the expiry worker cannot all act on it at once. */
   async findById(db: SQLExecutor, id: string, opts: { forUpdate?: boolean } = {}): Promise<TicketRow | null> {
     const rows = await db.query<TicketRow>(`${SELECT} WHERE t.id = $1${opts.forUpdate ? ' FOR UPDATE OF t' : ''}`, [id]);
@@ -71,14 +81,17 @@ export const ticketsRepository = {
       busId?: string | null;
       busName?: string | null;
       quantity?: number;
+      discountType?: DiscountType | null;
+      discountId?: string | null;
+      discountCentavos?: number;
     },
   ): Promise<string | null> {
     const rows = await db.query<{ id: string }>(
-      `INSERT INTO tickets (reference_code, passenger_id, origin_station_id, destination_station_id, fare_centavos, valid_until, bus_id, bus_name, quantity)
-       SELECT $1, $2, $3, $4, $5, $6, $8, $9, $10
+      `INSERT INTO tickets (reference_code, passenger_id, origin_station_id, destination_station_id, fare_centavos, valid_until, bus_id, bus_name, quantity, discount_type, discount_id, discount_centavos)
+       SELECT $1, $2, $3, $4, $5, $6, $8, $9, $10, $11, $12, $13
         WHERE (SELECT count(*) FROM tickets WHERE passenger_id = $2 AND status = 'pending_payment') < $7
        RETURNING id`,
-      [input.referenceCode, input.passengerId, input.originId, input.destinationId, input.fareCentavos, input.validUntil, input.maxPending, input.busId ?? null, input.busName ?? null, input.quantity ?? 1],
+      [input.referenceCode, input.passengerId, input.originId, input.destinationId, input.fareCentavos, input.validUntil, input.maxPending, input.busId ?? null, input.busName ?? null, input.quantity ?? 1, input.discountType ?? null, input.discountId ?? null, input.discountCentavos ?? 0],
     );
     return rows[0]?.id ?? null;
   },
@@ -90,13 +103,24 @@ export const ticketsRepository = {
    */
   async insertManualPaid(
     db: SQLExecutor,
-    input: { referenceCode: string; adminId: string; originId: string; destinationId: string; fareCentavos: number; quantity: number; passengerName: string | null },
+    input: {
+      referenceCode: string;
+      adminId: string;
+      originId: string;
+      destinationId: string;
+      fareCentavos: number;
+      quantity: number;
+      passengerName: string | null;
+      discountType: DiscountType | null;
+      discountId: string | null;
+      discountCentavos: number;
+    },
   ): Promise<string> {
     const rows = await db.query<{ id: string }>(
-      `INSERT INTO tickets (reference_code, passenger_id, origin_station_id, destination_station_id, fare_centavos, quantity, status, paid_at, valid_until, source, passenger_name, encoded_by)
-       VALUES ($1, $2, $3, $4, $5, $6, 'paid', now(), ${END_OF_MANILA_DAY}, 'manual', $7, $2)
+      `INSERT INTO tickets (reference_code, passenger_id, origin_station_id, destination_station_id, fare_centavos, quantity, status, paid_at, valid_until, source, passenger_name, encoded_by, discount_type, discount_id, discount_centavos)
+       VALUES ($1, $2, $3, $4, $5, $6, 'paid', now(), ${END_OF_MANILA_DAY}, 'manual', $7, $2, $8, $9, $10)
        RETURNING id`,
-      [input.referenceCode, input.adminId, input.originId, input.destinationId, input.fareCentavos, input.quantity, input.passengerName],
+      [input.referenceCode, input.adminId, input.originId, input.destinationId, input.fareCentavos, input.quantity, input.passengerName, input.discountType, input.discountId, input.discountCentavos],
     );
     return rows[0]!.id;
   },

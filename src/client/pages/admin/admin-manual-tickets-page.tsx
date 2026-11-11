@@ -7,11 +7,13 @@ import { Input } from '@/components/ui/input';
 import { NativeSelect } from '@/components/ui/native-select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { errorMessage } from '@/features/auth/use-auth';
+import { DiscountBadge } from '@/features/fares/discount-badge';
 import { useFareQuote } from '@/features/fares/use-fare';
 import { useStations } from '@/features/stations/use-stations';
 import { manualQrUrl, useCreateManualTicket, useManualTickets, type ManualTicket } from '@/features/tickets/use-manual-tickets';
 import { cn } from '@/lib/utils';
 import { formatManilaDateTime } from '@shared/datetime/ph-time';
+import { DISCOUNT_LABEL, DISCOUNT_PERCENT, DISCOUNT_TYPES, isDiscountType, priceTicket, type DiscountType } from '@shared/fares/discount';
 import { formatPeso } from '@shared/money';
 import { MAX_TICKET_QUANTITY, TICKET_STATUS_LABEL } from '@shared/tickets/status';
 
@@ -53,6 +55,17 @@ function TicketSlip({ ticket }: { ticket: ManualTicket }) {
             <dd className="font-extrabold">{ticket.passengerName}</dd>
           </div>
         )}
+        {ticket.discountType && (
+          <div className="col-span-2" data-testid="slip-discount">
+            <dt className="text-xs text-muted-foreground">
+              {DISCOUNT_LABEL[ticket.discountType]} discount ({DISCOUNT_PERCENT}% off{ticket.quantity > 1 ? ', ID holder only' : ''})
+            </dt>
+            <dd className="font-extrabold">
+              −{formatPeso(ticket.discountCentavos ?? 0)}
+              {ticket.discountId ? <span className="ml-2 font-mono text-xs font-semibold">ID {ticket.discountId}</span> : null}
+            </dd>
+          </div>
+        )}
         <div className="col-span-2">
           <dt className="text-xs text-muted-foreground">Valid until</dt>
           <dd className="font-bold">{formatManilaDateTime(ticket.validUntil)}</dd>
@@ -79,19 +92,31 @@ function NewTicketForm({ onIssued }: { onIssued: (ticket: ManualTicket) => void 
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [discount, setDiscount] = useState<DiscountType | ''>('');
+  const [discountId, setDiscountId] = useState('');
   const quote = useFareQuote(origin || null, destination || null);
-  const total = quote.data ? quote.data.fareCentavos * quantity : null;
+  const price = quote.data ? priceTicket(quote.data.fareCentavos, quantity, discount || null) : null;
+  const total = price ? price.totalCentavos : null;
+  const idMissing = Boolean(discount) && discountId.trim().length < 3;
 
   function submit(e: FormEvent) {
     e.preventDefault();
     create.mutate(
-      { originId: origin, destinationId: destination, quantity, ...(name.trim() ? { passengerName: name.trim() } : {}) },
+      {
+        originId: origin,
+        destinationId: destination,
+        quantity,
+        ...(name.trim() ? { passengerName: name.trim() } : {}),
+        ...(discount ? { discountType: discount, discountId: discountId.trim() } : {}),
+      },
       {
         onSuccess: (ticket) => {
           toast.success(`Ticket ${ticket.referenceCode} issued`);
           onIssued(ticket);
           setName('');
           setQuantity(1);
+          setDiscount('');
+          setDiscountId('');
         },
         onError: (err) => toast.error(errorMessage(err)),
       },
@@ -160,14 +185,50 @@ function NewTicketForm({ onIssued }: { onIssued: (ticket: ManualTicket) => void 
           />
         </div>
         <div className="flex min-w-[170px] flex-1 flex-col gap-0.5 rounded-xl bg-white/15 px-4 py-2.5" aria-live="polite" data-testid="fare-preview">
-          <span className="text-xs font-bold text-white/85">{quote.data ? `${formatPeso(quote.data.fareCentavos)} each · ${quantity} passenger${quantity === 1 ? '' : 's'}` : 'Total to collect'}</span>
+          <span className="text-xs font-bold text-white/85">
+            {quote.data ? `${formatPeso(quote.data.fareCentavos)} each · ${quantity} passenger${quantity === 1 ? '' : 's'}` : 'Total to collect'}
+            {price && price.discountCentavos > 0 ? ` · −${formatPeso(price.discountCentavos)} discount` : ''}
+          </span>
           <span className="text-2xl font-extrabold">{total !== null ? formatPeso(total) : '—'}</span>
         </div>
       </div>
 
+      <div className="relative flex flex-wrap gap-3" data-testid="discount-fields">
+        <div className="flex min-w-[180px] flex-1 flex-col gap-1.5">
+          <label htmlFor="mt-discount" className="text-[13px] font-bold">
+            Discount <span className="font-medium text-white/75">({DISCOUNT_PERCENT}%, one passenger)</span>
+          </label>
+          <NativeSelect
+            id="mt-discount"
+            value={discount}
+            onChange={(e) => {
+              const v = e.target.value;
+              setDiscount(isDiscountType(v) ? v : '');
+              if (!isDiscountType(v)) setDiscountId('');
+            }}
+            className={whiteField}
+          >
+            <option value="">None</option>
+            {DISCOUNT_TYPES.map((t) => (
+              <option key={t} value={t}>
+                {DISCOUNT_LABEL[t]}
+              </option>
+            ))}
+          </NativeSelect>
+        </div>
+        {discount && (
+          <div className="flex min-w-[180px] flex-1 flex-col gap-1.5">
+            <label htmlFor="mt-discount-id" className="text-[13px] font-bold">
+              {DISCOUNT_LABEL[discount]} ID number
+            </label>
+            <Input id="mt-discount-id" required minLength={3} maxLength={50} autoComplete="off" placeholder="As printed on the ID" value={discountId} onChange={(e) => setDiscountId(e.target.value)} className={whiteField} />
+          </div>
+        )}
+      </div>
+
       <button
         type="submit"
-        disabled={create.isPending || !origin || !destination || origin === destination}
+        disabled={create.isPending || !origin || !destination || origin === destination || idMissing}
         className="relative h-[52px] rounded-xl bg-[#facc15] px-[22px] text-[15px] font-extrabold text-[#1c1203] transition-colors hover:bg-[#fde047] disabled:cursor-not-allowed disabled:opacity-60"
       >
         {create.isPending ? 'Issuing…' : 'Issue ticket'}
@@ -260,6 +321,7 @@ export function AdminManualTicketsPage() {
                     {t.encodedByName ? ` · by ${t.encodedByName}` : ''}
                   </span>
                 </div>
+                {t.discountType && <DiscountBadge type={t.discountType} />}
                 <strong className="text-[15px] font-extrabold">{formatPeso(t.fareCentavos)}</strong>
                 <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-extrabold', STATUS_STYLE[t.status] ?? 'bg-surface-2 text-muted-foreground')}>{TICKET_STATUS_LABEL[t.status]}</span>
                 <button

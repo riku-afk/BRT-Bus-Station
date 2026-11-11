@@ -126,3 +126,57 @@ describe('Manual tickets (admin)', () => {
     expect(screen.queryByRole('button', { name: /Print ticket/ })).toBeNull();
   });
 });
+
+describe('Manual tickets (admin): Senior Citizen / PWD discount', () => {
+  async function fill() {
+    await screen.findAllByRole('option', { name: '1. Shelter A' });
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: 'st-1' } });
+    fireEvent.change(screen.getByLabelText('To'), { target: { value: 'st-3' } });
+    await waitFor(() => expect(screen.getByTestId('fare-preview').textContent).toContain('₱30.00'));
+  }
+
+  it('asks for the ID number once a discount is chosen, takes 20% off one passenger in the preview, and will not issue without the ID', async () => {
+    const calls = fakeApi();
+    view();
+    await fill();
+    expect(screen.queryByLabelText(/ID number/)).toBeNull();
+
+    fireEvent.change(screen.getByLabelText(/^Discount/), { target: { value: 'senior' } });
+    fireEvent.change(screen.getByLabelText('Passengers'), { target: { value: '2' } });
+    // 2 x 30.00 less 6.00 (20% of one fare) = 54.00
+    await waitFor(() => expect(screen.getByTestId('fare-preview').textContent).toContain('₱54.00'));
+    expect(screen.getByTestId('fare-preview').textContent).toContain('−₱6.00 discount');
+    expect((screen.getByRole('button', { name: 'Issue ticket' }) as HTMLButtonElement).disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText(/Senior Citizen ID number/), { target: { value: 'OSCA-0001234' } });
+    expect((screen.getByRole('button', { name: 'Issue ticket' }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByRole('button', { name: 'Issue ticket' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
+    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ originId: 'st-1', destinationId: 'st-3', quantity: 2, discountType: 'senior', discountId: 'OSCA-0001234' });
+  });
+
+  it('sends no discount when none is chosen, and choosing None again takes the ID field away', async () => {
+    const calls = fakeApi();
+    view();
+    await fill();
+    fireEvent.change(screen.getByLabelText(/^Discount/), { target: { value: 'pwd' } });
+    expect(screen.getByLabelText(/PWD ID number/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText(/^Discount/), { target: { value: '' } });
+    expect(screen.queryByLabelText(/ID number/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Issue ticket' }));
+    await waitFor(() => expect(calls.some((c) => c.method === 'POST')).toBe(true));
+    expect(calls.find((c) => c.method === 'POST')!.body).toEqual({ originId: 'st-1', destinationId: 'st-3', quantity: 1 });
+  });
+
+  it('prints the discount and the ID on the ticket, and badges it in the list', async () => {
+    fakeApi([ticket({ discountType: 'senior', discountCentavos: 600, discountId: 'OSCA-0001234', fareCentavos: 5400 })]);
+    view();
+    await screen.findByTestId('manual-list');
+    expect(screen.getByTestId('discount-badge').textContent).toContain('Senior Citizen');
+    fireEvent.click(screen.getByRole('button', { name: 'View ticket BRT-ABC123' }));
+    const slip = screen.getByTestId('slip-discount');
+    expect(slip.textContent).toContain('Senior Citizen discount (20% off, ID holder only)');
+    expect(slip.textContent).toContain('−₱6.00');
+    expect(slip.textContent).toContain('ID OSCA-0001234');
+  });
+});

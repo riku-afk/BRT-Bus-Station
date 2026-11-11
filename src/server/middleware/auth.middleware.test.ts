@@ -7,7 +7,7 @@ import { requireRole } from './auth.middleware';
 function appWith(user: { role: 'passenger' | 'konduktor' | 'admin' } | null) {
   const app = createOpenAPIApp();
   app.use('*', async (c, next) => {
-    c.set('auth', user ? { user: { id: 'u1', email: 'a@b.c', fullName: 'A', role: user.role } } : null);
+    c.set('auth', user ? { user: { id: 'u1', email: 'a@b.c', fullName: 'A', role: user.role, discountType: null } } : null);
     await next();
   });
   app.get('/admin-only', requireRole('admin'), (c) => c.json({ ok: true }));

@@ -1,5 +1,6 @@
 import { CheckCircle2, ScanLine, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { DISCOUNT_LABEL } from '@shared/fares/discount';
 import { formatPeso } from '@shared/money';
 import type { ScanResponse } from '@shared/scans/models';
 
@@ -57,6 +58,16 @@ export function ScanResultScreen({ result, onNext }: { result: ScanResponse; onN
         </div>
         {result.ticket && (
           <div className={cn('rounded-2xl p-4', tone.dark ? 'bg-white/40' : 'bg-white/15')}>
+            {ok && result.ticket.discountType && (
+              <p className="mb-2 rounded-xl bg-[#1c1203] px-3 py-2 text-center text-base font-extrabold text-[#fde68a]" data-testid="check-id">
+                {DISCOUNT_LABEL[result.ticket.discountType]} discount: check the holder&apos;s ID
+                {result.ticket.discountId ? (
+                  <span className="block font-mono text-lg tracking-wider">{result.ticket.discountId}</span>
+                ) : (
+                  <span className="block text-sm font-semibold">{result.ticket.discountType === 'student' ? 'Ask for the student ID' : 'Ask for an ID showing the age (60 or over)'}</span>
+                )}
+              </p>
+            )}
             {ok && (
               <p className="mb-2 rounded-xl bg-white/25 py-1.5 text-center text-2xl font-extrabold" data-testid="admit">
                 Admit {result.ticket.quantity} {result.ticket.quantity === 1 ? 'passenger' : 'passengers'}

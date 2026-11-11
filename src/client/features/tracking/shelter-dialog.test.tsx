@@ -247,3 +247,46 @@ describe('ShelterDialog', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });
+
+describe('the price a Senior Citizen or PWD passenger sees', () => {
+  const asPassenger = (discountType: 'senior' | 'pwd' | null) =>
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        const data = url.includes('/fares/quote')
+          ? { originId: 'st-3', destinationId: 'st-20', stationsTravelled: 17, fareCentavos: 4900, source: 'computed' }
+          : url === '/api/auth/me'
+            ? { id: 'u1', email: 'a@b.c', fullName: 'Lola', role: 'passenger', discountType }
+            : null;
+        return new Response(JSON.stringify({ success: true, data, timestamp: '' }), { status: 200 });
+      }),
+    );
+
+  it('is 20% less for one passenger, and the button shows the discounted amount', async () => {
+    asPassenger('senior');
+    const onBuy = vi.fn();
+    view([bus()], { onBuy });
+    fireEvent.click(await screen.findByRole('button', { name: /Buy ticket · ₱39\.20/ }));
+    expect(screen.getByTestId('offer-fare').textContent).toContain('₱39.20');
+    expect(screen.getByTestId('discount-note').textContent).toContain('Senior Citizen discount (20% off, −₱9.80)');
+    expect(onBuy.mock.calls[0]![1]).toBe(1);
+  });
+
+  it('takes 20% off only one fare of a group: the rest pay in full', async () => {
+    asPassenger('pwd');
+    view([bus()]);
+    await screen.findByRole('button', { name: /Buy ticket · ₱39\.20/ });
+    for (let i = 0; i < 2; i++) fireEvent.click(screen.getByRole('button', { name: 'More passengers' }));
+    // 3 passengers: 2 x 49.00 + 39.20 = 137.20
+    expect(screen.getByTestId('offer-fare').textContent).toContain('₱49.00 each · ₱137.20 for 3');
+    expect(screen.getByTestId('discount-note').textContent).toContain('PWD discount');
+    expect(screen.getByTestId('discount-note').textContent).toContain('for the ID holder only');
+  });
+
+  it('is the plain price for a passenger with no discount', async () => {
+    asPassenger(null);
+    view([bus()]);
+    await screen.findByRole('button', { name: 'Buy ticket · ₱49.00' });
+    expect(screen.queryByTestId('discount-note')).toBeNull();
+  });
+});

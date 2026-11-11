@@ -2,10 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Bus, ChevronDown, Clock, Info, Loader2, Minus, Navigation, Plus, Ticket, Users, X } from 'lucide-react';
 import { Dialog, DialogClose, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { useCurrentUser } from '@/features/auth/use-auth';
+import { DiscountNote } from '@/features/fares/discount-badge';
 import { useFareQuote } from '@/features/fares/use-fare';
 import { cn } from '@/lib/utils';
 import { formatManilaTime } from '@shared/datetime/ph-time';
 import { formatEta, type StationArrival } from '@shared/eta/eta';
+import { priceTicket } from '@shared/fares/discount';
 import { formatPeso } from '@shared/money';
 import { MAX_TICKET_QUANTITY } from '@shared/tickets/status';
 import type { BusPosition } from '@shared/tracking/models';
@@ -49,6 +52,10 @@ function WaitingBus({ bus, shelter, open, onToggle, viewer, buying, onBuy, onSig
   const [quantity, setQuantity] = useState(1);
   const departure = describeDeparture(bus.expectedDepartureAt);
   const quote = useFareQuote(open ? shelter.id : null, open ? bus.headingToId : null);
+  // A passenger whose account carries a Senior Citizen / PWD discount pays 20% less for ONE seat (the ID holder's). The server prices it; this is the preview.
+  const { data: me } = useCurrentUser();
+  const discount = viewer === 'passenger' ? (me?.discountType ?? null) : null;
+  const price = quote.data ? priceTicket(quote.data.fareCentavos, quantity, discount) : null;
   const announced = Boolean(bus.plannedDestinationName);
 
   return (
@@ -92,7 +99,13 @@ function WaitingBus({ bus, shelter, open, onToggle, viewer, buying, onBuy, onSig
             <Tile label="To">{bus.headingToName ?? '—'}</Tile>
             <Tile label="Leaves">{!bus.expectedDepartureAt ? 'Time not set yet' : departureHasPassed(bus.expectedDepartureAt) ? 'Any moment now' : `about ${formatManilaTime(bus.expectedDepartureAt)}`}</Tile>
             <Tile label="Fare" testId="offer-fare">
-              {quote.data ? (quantity > 1 ? `${formatPeso(quote.data.fareCentavos)} each · ${formatPeso(quote.data.fareCentavos * quantity)} for ${quantity}` : formatPeso(quote.data.fareCentavos)) : quote.isFetching ? '…' : '—'}
+              {quote.data && price ? (quantity > 1 ? `${formatPeso(quote.data.fareCentavos)} each · ${formatPeso(price.totalCentavos)} for ${quantity}` : formatPeso(price.totalCentavos)) : quote.isFetching ? '…' : '—'}
+              {discount && price && price.discountCentavos > 0 && (
+                <>
+                  <br />
+                  <DiscountNote type={discount} discountCentavos={price.discountCentavos} quantity={quantity} />
+                </>
+              )}
             </Tile>
           </div>
           {viewer !== 'other' && (
@@ -123,7 +136,7 @@ function WaitingBus({ bus, shelter, open, onToggle, viewer, buying, onBuy, onSig
           {viewer === 'passenger' && (
             <button type="button" className={BUY_CLASS} onClick={() => onBuy(quantity)} disabled={buying || !quote.data || !bus.headingToId}>
               {buying ? <Loader2 className="size-5 animate-spin" /> : <Ticket className="size-5" />}
-              {buying ? 'Preparing payment…' : quote.data ? `${quantity > 1 ? `Buy ${quantity} tickets` : 'Buy ticket'} · ${formatPeso(quote.data.fareCentavos * quantity)}` : 'Buy ticket'}
+              {buying ? 'Preparing payment…' : quote.data ? `${quantity > 1 ? `Buy ${quantity} tickets` : 'Buy ticket'} · ${formatPeso(price?.totalCentavos ?? quote.data.fareCentavos * quantity)}` : 'Buy ticket'}
             </button>
           )}
           {viewer === 'guest' && (

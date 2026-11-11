@@ -1,6 +1,7 @@
 /** SQL only. */
 import type { SQLExecutor } from '@core/database';
 import type { UserRow } from '@modules/auth/auth.types';
+import type { DiscountType } from '@shared/fares/discount';
 
 export const ssoRepository = {
   async findByExternal(db: SQLExecutor, provider: string, externalId: string): Promise<UserRow | null> {
@@ -25,6 +26,11 @@ export const ssoRepository = {
 
   async updateName(db: SQLExecutor, id: string, fullName: string): Promise<void> {
     await db.query('UPDATE users SET full_name = $2 WHERE id = $1 AND full_name <> $2', [id, fullName]);
+  },
+
+  /** Give, change or take away the fare discount an account carries (what the partner vouches for at this sign-in). */
+  async setDiscount(db: SQLExecutor, id: string, type: DiscountType | null, discountId: string | null): Promise<void> {
+    await db.query('UPDATE users SET discount_type = $2, discount_id = $3 WHERE id = $1 AND (discount_type IS DISTINCT FROM $2 OR discount_id IS DISTINCT FROM $3)', [id, type, discountId]);
   },
 
   /** True the first time a token id is seen; false when it was already used. */

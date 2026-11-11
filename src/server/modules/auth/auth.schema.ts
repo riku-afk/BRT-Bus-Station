@@ -1,4 +1,5 @@
 import { z } from '@hono/zod-openapi';
+import { DISCOUNT_TYPES } from '@shared/fares/discount';
 import { ROLES } from '@shared/rbac/roles';
 
 export const RegisterBody = z.object({
@@ -18,6 +19,7 @@ export const UserView = z.object({
   email: z.string(),
   fullName: z.string(),
   role: z.enum(ROLES),
+  discountType: z.enum(DISCOUNT_TYPES).nullable(),
 });
 
 export const UserResponse = z.object({ success: z.literal(true), data: UserView, timestamp: z.string() });

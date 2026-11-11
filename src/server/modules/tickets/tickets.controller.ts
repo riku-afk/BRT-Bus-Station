@@ -115,6 +115,8 @@ export const ticketsController = createOpenAPIApp()
       destinationId: body.destinationId,
       quantity: body.quantity,
       passengerName: body.passengerName || null,
+      discountType: body.discountType ?? null,
+      discountId: body.discountId ?? null,
     });
     return c.json(apiResponse(ticket), 201);
   })

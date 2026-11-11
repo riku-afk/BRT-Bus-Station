@@ -1,3 +1,4 @@
+import type { DiscountType } from '@shared/fares/discount';
 import type { ScanReason, ScanResult } from '@shared/scans/models';
 
 /** The signed-in konduktor and the bus they have at this moment (SCN-07: the bus may be null). */
@@ -29,6 +30,8 @@ export type ScannedTicket = {
   destination_name: string;
   fare_centavos: number;
   quantity: number;
+  discount_type: DiscountType | null;
+  discount_id: string | null;
   used_at: Date | null;
   /** Paid, but its day has ended (only read from the locked row; a re-read does not need it). */
   lapsed?: boolean;

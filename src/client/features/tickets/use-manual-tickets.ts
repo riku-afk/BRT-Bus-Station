@@ -1,12 +1,13 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiGet, apiPost } from '@/lib/api/client';
 import { ADMIN_PAGE_SIZE, type Page } from '@shared/pagination';
+import type { DiscountType } from '@shared/fares/discount';
 import type { Ticket } from './use-tickets';
 
 /** A ticket an admin sold over the counter: paid at once, with who it was sold to and who sold it. */
-export type ManualTicket = Ticket & { passengerName: string | null; encodedByName: string | null };
+export type ManualTicket = Ticket & { passengerName: string | null; encodedByName: string | null; /** The Senior Citizen / PWD ID number the admin checked. */ discountId?: string | null };
 
-export type ManualTicketInput = { originId: string; destinationId: string; quantity: number; passengerName?: string };
+export type ManualTicketInput = { originId: string; destinationId: string; quantity: number; passengerName?: string; discountType?: DiscountType; discountId?: string };
 
 const KEY = ['manual-tickets'] as const;
 
