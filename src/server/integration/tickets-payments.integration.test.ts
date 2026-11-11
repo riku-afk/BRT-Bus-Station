@@ -587,6 +587,80 @@ describe('payments for admins', () => {
     expect(flagged.every((p) => p.status === 'needs_review' && p.reviewReason)).toBe(true);
     expect(new Set(flagged.map((p) => p.reviewReason))).toEqual(new Set(['amount_mismatch', 'ticket_paid', 'paid_after_close', 'ticket_expired']));
   });
+
+  type Row = { status: string; referenceCode: string; provider: string; method: string | null; amountCentavos: number; createdAt: string };
+  const list = async (query: string) => (await admin.call('GET', `/payments?pageSize=50&${query}`)).body.data as { items: Row[]; total: number };
+
+  it('filters by status, method, reference and Manila day', async () => {
+    const all = await list('');
+    const paid = await list('status=succeeded');
+    expect(paid.total).toBeGreaterThan(0);
+    expect(paid.items.every((p) => p.status === 'succeeded')).toBe(true);
+    // The older needsReview flag still means status=needs_review.
+    expect((await list('needsReview=true')).total).toBe((await list('status=needs_review')).total);
+
+    const method = paid.items.find((p) => p.method)!.method!;
+    expect((await list(`method=${method}`)).items.every((p) => p.method === method)).toBe(true);
+
+    const ref = all.items[0]!.referenceCode;
+    const byRef = await list(`q=${encodeURIComponent(ref.slice(-5).toLowerCase())}`);
+    expect(byRef.items.map((p) => p.referenceCode)).toContain(ref);
+    expect(byRef.items.every((p) => p.referenceCode.toLowerCase().includes(ref.slice(-5).toLowerCase()))).toBe(true);
+    // LIKE wildcards are matched literally.
+    expect((await list('q=%25')).total).toBe(0);
+
+    const today = new Date(Date.now() + 8 * 3600_000).toISOString().slice(0, 10);
+    expect((await list(`from=${today}&to=${today}`)).total).toBe(all.total);
+    expect((await list('to=2000-01-01')).total).toBe(0);
+    expect((await admin.call('GET', '/payments?from=yesterday')).status).toBe(400);
+    expect((await admin.call('GET', '/payments?status=refunded')).status).toBe(400);
+  });
+
+  it('reports totals that add up to the filtered list, in centavos', async () => {
+    expect((await pax1.call('GET', '/payments/report')).status).toBe(403);
+    const all = await list('');
+    const report = (await admin.call('GET', '/payments/report')).body.data as {
+      totals: { count: number; amountCentavos: number; paidCount: number; paidCentavos: number; needsReviewCount: number };
+      byStatus: { status: string; count: number; amountCentavos: number }[];
+      byMethod: { method: string; count: number; amountCentavos: number }[];
+      byDay: { day: string; count: number; paidCount: number; paidCentavos: number }[];
+      methods: string[];
+    };
+    expect(report.totals.count).toBe(all.total);
+    expect(report.byStatus.reduce((n, s) => n + s.count, 0)).toBe(report.totals.count);
+    expect(report.byStatus.reduce((n, s) => n + s.amountCentavos, 0)).toBe(report.totals.amountCentavos);
+    expect(report.byMethod.reduce((n, m) => n + m.amountCentavos, 0)).toBe(report.totals.paidCentavos);
+    expect(report.byDay.reduce((n, d) => n + d.paidCentavos, 0)).toBe(report.totals.paidCentavos);
+    expect(report.totals.needsReviewCount).toBe((await list('status=needs_review')).total);
+    const paid = await list('status=succeeded');
+    expect(report.totals.paidCentavos).toBe(paid.items.reduce((n, p) => n + p.amountCentavos, 0));
+    expect(report.methods.length).toBeGreaterThan(0);
+
+    const onlyPaid = (await admin.call('GET', '/payments/report?status=succeeded')).body.data as typeof report;
+    expect(onlyPaid.totals.count).toBe(paid.total);
+    expect(onlyPaid.byStatus.map((s) => s.status)).toEqual(['succeeded']);
+  });
+
+  it('exports the filtered payments as CSV, for admins only', async () => {
+    expect((await anon().raw('/payments/export.csv')).status).toBe(401);
+    expect((await pax1.raw('/payments/export.csv')).status).toBe(403);
+
+    const res = await admin.raw('/payments/export.csv?status=succeeded&from=2000-01-01');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toMatch(/^text\/csv/);
+    expect(res.headers.get('content-disposition')).toMatch(/attachment; filename="payments-2000-01-01_to_today-succeeded\.csv"/);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]); // UTF-8 byte-order mark, for Excel
+    const lines = new TextDecoder().decode(bytes).trimEnd().split('\r\n');
+    expect(lines[0]).toBe('Created (Manila),Updated (Manila),Ticket reference,Origin,Destination,Provider,Method,Amount (PHP),Amount (centavos),Status,Review reason,Payment ID');
+    const paid = await list('status=succeeded');
+    expect(lines.length - 1).toBe(paid.total);
+    expect(res.headers.get('x-export-rows')).toBe(String(paid.total));
+    expect(lines.slice(1).every((l) => l.includes(',succeeded,'))).toBe(true);
+    const first = paid.items[0]!;
+    expect(lines[1]).toContain(`,${first.referenceCode},`);
+    expect(lines[1]).toContain(`,${(first.amountCentavos / 100).toFixed(2)},${first.amountCentavos},`);
+  });
 });
 
 describe('the whole purchase, as a passenger does it', () => {

@@ -23,6 +23,7 @@ import {
   type PaymentEvent,
   type PaymentProviderName,
 } from '@integrations/payment';
+import { centavosToDecimal, toCsv } from '@lib/csv';
 import { ApiError } from '@lib/response';
 import { clampPage, offsetOf } from '@shared/pagination';
 import { qrPhPng } from '@lib/qrph-image';
@@ -32,7 +33,8 @@ import { ticketsRepository } from '@modules/tickets/tickets.repository';
 import type { TicketRow } from '@modules/tickets/tickets.types';
 import { TICKET_STATUS_LABEL } from '@shared/tickets/status';
 import { paymentsRepository } from './payments.repository';
-import type { CheckoutView, PaymentRow, PaymentStatusView, WebhookOutcome } from './payments.types';
+import { PAYMENT_STATUSES } from './payments.types';
+import type { CheckoutView, PaymentAdminFilter, PaymentReportRow, PaymentRow, PaymentStatus, PaymentStatusView, WebhookOutcome } from './payments.types';
 
 const KNOWN_PROVIDERS: readonly PaymentProviderName[] = ['mock', 'pisopay'];
 
@@ -213,13 +215,100 @@ export const paymentsService = {
 
   // ── Admin ────────────────────────────────────────────────────────────────────────────────────────────────────
 
-  async listForAdmin(opts: { needsReviewOnly: boolean; page: number; pageSize: number }, db: SQLExecutor = getDb()) {
-    const total = await paymentsRepository.countForAdmin(db, opts);
+  async listForAdmin(filter: PaymentAdminFilter, opts: { page: number; pageSize: number }, db: SQLExecutor = getDb()) {
+    const total = await paymentsRepository.countForAdmin(db, filter);
     const page = clampPage(opts.page, total, opts.pageSize);
-    const rows = await paymentsRepository.listForAdmin(db, { needsReviewOnly: opts.needsReviewOnly, limit: opts.pageSize, offset: offsetOf(page, opts.pageSize) });
+    const rows = await paymentsRepository.listForAdmin(db, filter, { limit: opts.pageSize, offset: offsetOf(page, opts.pageSize) });
     return { rows, total, page, pageSize: opts.pageSize };
   },
+
+  /** The admin report for the filtered payments: totals, and breakdowns by status, by method (paid only) and by Manila day. */
+  async reportForAdmin(filter: PaymentAdminFilter, db: SQLExecutor = getDb()): Promise<PaymentReport> {
+    const [rows, methods] = await Promise.all([paymentsRepository.reportForAdmin(db, filter), paymentsRepository.methods(db)]);
+    return { ...summarise(rows), methods };
+  },
+
+  /** The filtered payments as a CSV file, newest first, at most EXPORT_MAX_ROWS rows. */
+  async exportCsv(filter: PaymentAdminFilter, db: SQLExecutor = getDb()): Promise<{ csv: string; rows: number; truncated: boolean }> {
+    const rows = await paymentsRepository.listForAdmin(db, filter, { limit: EXPORT_MAX_ROWS + 1, offset: 0 });
+    const truncated = rows.length > EXPORT_MAX_ROWS;
+    const kept = truncated ? rows.slice(0, EXPORT_MAX_ROWS) : rows;
+    const csv = toCsv(
+      ['Created (Manila)', 'Updated (Manila)', 'Ticket reference', 'Origin', 'Destination', 'Provider', 'Method', 'Amount (PHP)', 'Amount (centavos)', 'Status', 'Review reason', 'Payment ID'],
+      kept.map((r) => [
+        manilaStamp(r.created_at),
+        manilaStamp(r.updated_at),
+        r.reference_code,
+        r.origin_name,
+        r.destination_name,
+        r.provider,
+        r.method,
+        centavosToDecimal(r.amount_centavos),
+        r.amount_centavos,
+        r.status,
+        r.review_reason,
+        r.id,
+      ]),
+    );
+    return { csv, rows: kept.length, truncated };
+  },
 };
+
+/** The CSV export is a report, not a backup: one file holds at most this many payments (narrow the dates for more). */
+export const EXPORT_MAX_ROWS = 50_000;
+
+export type PaymentReport = {
+  totals: { count: number; amountCentavos: number; paidCount: number; paidCentavos: number; pendingCentavos: number; needsReviewCount: number; needsReviewCentavos: number };
+  byStatus: { status: PaymentStatus; count: number; amountCentavos: number }[];
+  byMethod: { method: string; count: number; amountCentavos: number }[];
+  byDay: { day: string; count: number; paidCount: number; paidCentavos: number }[];
+  methods: string[];
+};
+
+/** Fold the grouped rows into the report. Money stays in integer centavos throughout. */
+export function summarise(rows: readonly PaymentReportRow[]): Omit<PaymentReport, 'methods'> {
+  const totals = { count: 0, amountCentavos: 0, paidCount: 0, paidCentavos: 0, pendingCentavos: 0, needsReviewCount: 0, needsReviewCentavos: 0 };
+  const byStatus = new Map<PaymentStatus, { status: PaymentStatus; count: number; amountCentavos: number }>();
+  const byMethod = new Map<string, { method: string; count: number; amountCentavos: number }>();
+  const byDay = new Map<string, { day: string; count: number; paidCount: number; paidCentavos: number }>();
+  for (const r of rows) {
+    const amount = Number(r.amount_centavos);
+    totals.count += r.n;
+    totals.amountCentavos += amount;
+    const s = byStatus.get(r.status) ?? { status: r.status, count: 0, amountCentavos: 0 };
+    s.count += r.n;
+    s.amountCentavos += amount;
+    byStatus.set(r.status, s);
+    const d = byDay.get(r.day) ?? { day: r.day, count: 0, paidCount: 0, paidCentavos: 0 };
+    d.count += r.n;
+    if (r.status === 'succeeded') {
+      totals.paidCount += r.n;
+      totals.paidCentavos += amount;
+      d.paidCount += r.n;
+      d.paidCentavos += amount;
+      const key = r.method ?? 'not recorded';
+      const m = byMethod.get(key) ?? { method: key, count: 0, amountCentavos: 0 };
+      m.count += r.n;
+      m.amountCentavos += amount;
+      byMethod.set(key, m);
+    } else if (r.status === 'pending') {
+      totals.pendingCentavos += amount;
+    } else if (r.status === 'needs_review') {
+      totals.needsReviewCount += r.n;
+      totals.needsReviewCentavos += amount;
+    }
+    byDay.set(r.day, d);
+  }
+  return {
+    totals,
+    byStatus: PAYMENT_STATUSES.flatMap((st) => byStatus.get(st) ?? []),
+    byMethod: [...byMethod.values()].sort((a, b) => b.amountCentavos - a.amountCentavos),
+    byDay: [...byDay.values()].sort((a, b) => b.day.localeCompare(a.day)),
+  };
+}
+
+/** `2026-11-11 14:05:09` in Manila time: sortable, and read as a date by spreadsheets. */
+const manilaStamp = (at: Date) => new Date(at.getTime() + 8 * 3600_000).toISOString().slice(0, 19).replace('T', ' ');
 
 /**
  * Apply one provider event (from a webhook, or from asking the provider) to its payment and ticket, exactly once.

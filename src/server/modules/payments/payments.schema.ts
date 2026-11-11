@@ -33,7 +33,40 @@ export const MockCompleteResponse = z.object({
   timestamp: z.string(),
 });
 
-export const AdminListQuery = PageQuery.extend({ needsReview: z.enum(['true', 'false']).optional() });
+const Day = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD');
+
+/** The admin filter, shared by the list, the report and the CSV export. `needsReview=true` is kept for older callers. */
+export const AdminFilterQuery = z.object({
+  status: z.enum(PAYMENT_STATUSES).optional(),
+  provider: z.enum(['mock', 'pisopay']).optional(),
+  method: z.string().trim().min(1).max(40).optional(),
+  from: Day.optional().openapi({ description: 'First Manila day, inclusive' }),
+  to: Day.optional().openapi({ description: 'Last Manila day, inclusive' }),
+  q: z.string().trim().min(1).max(40).optional().openapi({ description: 'Part of a ticket reference code' }),
+  needsReview: z.enum(['true', 'false']).optional(),
+});
+export const AdminListQuery = PageQuery.extend(AdminFilterQuery.shape);
+
+const Money = z.number().int();
+export const AdminReportResponse = z.object({
+  success: z.literal(true),
+  data: z.object({
+    totals: z.object({
+      count: z.number().int(),
+      amountCentavos: Money,
+      paidCount: z.number().int(),
+      paidCentavos: Money,
+      pendingCentavos: Money,
+      needsReviewCount: z.number().int(),
+      needsReviewCentavos: Money,
+    }),
+    byStatus: z.array(z.object({ status: z.enum(PAYMENT_STATUSES), count: z.number().int(), amountCentavos: Money })),
+    byMethod: z.array(z.object({ method: z.string(), count: z.number().int(), amountCentavos: Money })),
+    byDay: z.array(z.object({ day: z.string(), count: z.number().int(), paidCount: z.number().int(), paidCentavos: Money })),
+    methods: z.array(z.string()),
+  }),
+  timestamp: z.string(),
+});
 
 export const AdminPaymentView = z.object({
   id: z.uuid(),

@@ -1,9 +1,30 @@
 /** SQL only. Payments are evidence: rows are inserted, and only `status` / `review_reason` / `method` ever move. */
 import type { SQLExecutor } from '@core/database';
-import type { PaymentAdminRow, PaymentRow, PaymentStatus, WebhookOutcome } from './payments.types';
+import type { PaymentAdminFilter, PaymentAdminRow, PaymentReportRow, PaymentRow, PaymentStatus, WebhookOutcome } from './payments.types';
 
 const COLUMNS =
   'id, ticket_id, provider, provider_ref, method, amount_centavos, checkout_url, status, review_reason, qr_payload, provider_reference_no, channel_code, created_at, updated_at';
+
+/** The admin filter ($1–$6). Days are Manila calendar days; `to` is inclusive. Needs `payments p JOIN tickets t`. */
+const ADMIN_WHERE = `
+        WHERE ($1::text IS NULL OR p.status = $1)
+          AND ($2::text IS NULL OR p.provider = $2)
+          AND ($3::text IS NULL OR p.method = $3)
+          AND ($4::date IS NULL OR p.created_at >= ($4::date)::timestamp AT TIME ZONE 'Asia/Manila')
+          AND ($5::date IS NULL OR p.created_at < ($5::date + 1)::timestamp AT TIME ZONE 'Asia/Manila')
+          AND ($6::text IS NULL OR t.reference_code ILIKE '%' || $6 || '%' ESCAPE '\\')`;
+
+/** LIKE wildcards in the search box are matched literally. */
+const likeLiteral = (q: string) => q.replace(/[\\%_]/g, (c) => `\\${c}`);
+
+const adminArgs = (f: PaymentAdminFilter) => [
+  f.status ?? null,
+  f.provider ?? null,
+  f.method ?? null,
+  f.from ?? null,
+  f.to ?? null,
+  f.q ? likeLiteral(f.q) : null,
+];
 
 export const paymentsRepository = {
   async insert(
@@ -93,12 +114,13 @@ export const paymentsRepository = {
     return rows.length > 0;
   },
 
-  async countForAdmin(db: SQLExecutor, opts: { needsReviewOnly: boolean }): Promise<number> {
-    const rows = await db.query<{ n: number }>(`SELECT count(*)::int AS n FROM payments p ${opts.needsReviewOnly ? "WHERE p.status = 'needs_review'" : ''}`);
+  async countForAdmin(db: SQLExecutor, filter: PaymentAdminFilter): Promise<number> {
+    const rows = await db.query<{ n: number }>(`SELECT count(*)::int AS n FROM payments p JOIN tickets t ON t.id = p.ticket_id ${ADMIN_WHERE}`, adminArgs(filter));
     return rows[0]!.n;
   },
 
-  listForAdmin(db: SQLExecutor, opts: { needsReviewOnly: boolean; limit: number; offset: number }): Promise<PaymentAdminRow[]> {
+  /** One page of the admin list, newest first. `limit` is also how the CSV export caps its size. */
+  listForAdmin(db: SQLExecutor, filter: PaymentAdminFilter, opts: { limit: number; offset: number }): Promise<PaymentAdminRow[]> {
     return db.query<PaymentAdminRow>(
       `SELECT p.id, p.ticket_id, p.provider, p.provider_ref, p.method, p.amount_centavos, p.checkout_url, p.status,
               p.review_reason, p.created_at, p.updated_at, t.reference_code, so.name AS origin_name, sd.name AS destination_name
@@ -106,10 +128,30 @@ export const paymentsRepository = {
          JOIN tickets t ON t.id = p.ticket_id
          JOIN stations so ON so.id = t.origin_station_id
          JOIN stations sd ON sd.id = t.destination_station_id
-        ${opts.needsReviewOnly ? "WHERE p.status = 'needs_review'" : ''}
+        ${ADMIN_WHERE}
         ORDER BY p.created_at DESC, p.id
-        LIMIT $1 OFFSET $2`,
-      [opts.limit, opts.offset],
+        LIMIT $7 OFFSET $8`,
+      [...adminArgs(filter), opts.limit, opts.offset],
     );
+  },
+
+  /** Counts and sums of the filtered payments, grouped by status, method and Manila day, for the admin report. */
+  reportForAdmin(db: SQLExecutor, filter: PaymentAdminFilter): Promise<PaymentReportRow[]> {
+    return db.query<PaymentReportRow>(
+      `SELECT p.status, p.method, to_char(p.created_at AT TIME ZONE 'Asia/Manila', 'YYYY-MM-DD') AS day,
+              count(*)::int AS n, sum(p.amount_centavos)::bigint AS amount_centavos
+         FROM payments p
+         JOIN tickets t ON t.id = p.ticket_id
+        ${ADMIN_WHERE}
+        GROUP BY 1, 2, 3
+        ORDER BY 3 DESC`,
+      adminArgs(filter),
+    );
+  },
+
+  /** Every payment method that has ever been recorded, for the filter list. */
+  async methods(db: SQLExecutor): Promise<string[]> {
+    const rows = await db.query<{ method: string }>('SELECT DISTINCT method FROM payments WHERE method IS NOT NULL ORDER BY method');
+    return rows.map((r) => r.method);
   },
 };

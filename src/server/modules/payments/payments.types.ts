@@ -22,6 +22,20 @@ export type PaymentRow = {
 /** A payment with its ticket's reference, for the admin list. */
 export type PaymentAdminRow = Omit<PaymentRow, 'qr_payload' | 'provider_reference_no' | 'channel_code'> & { reference_code: string; origin_name: string; destination_name: string };
 
+/** Which payments the admin list, report and CSV export cover. Days are Manila calendar days (`YYYY-MM-DD`), both inclusive. */
+export type PaymentAdminFilter = {
+  status?: PaymentStatus;
+  provider?: 'mock' | 'pisopay';
+  method?: string;
+  from?: string;
+  to?: string;
+  /** Part of a ticket reference code, e.g. `BRT-7K`. */
+  q?: string;
+};
+
+/** One group of the admin report: payments with the same status, method and Manila day. */
+export type PaymentReportRow = { status: PaymentStatus; method: string | null; day: string; n: number; amount_centavos: string };
+
 /** What the app did with a webhook event; stored on the event row as evidence. */
 export type WebhookOutcome =
   | 'applied' // the ticket is now paid

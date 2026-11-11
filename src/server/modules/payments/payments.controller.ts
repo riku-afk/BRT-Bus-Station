@@ -1,18 +1,21 @@
-import { createRoute } from '@hono/zod-openapi';
+import { createRoute, z } from '@hono/zod-openapi';
 import { createOpenAPIApp } from '@lib/openapi';
 import { pageParams } from '@lib/pagination';
 import { ApiError, apiResponse } from '@lib/response';
 import { toPage } from '@shared/pagination';
 import { authorize } from '@middleware/auth.middleware';
 import {
+  AdminFilterQuery,
   AdminListQuery,
   AdminPaymentListResponse,
+  AdminReportResponse,
   MockCompleteBody,
   MockCompleteResponse,
   MockSessionResponse,
   ProviderRefParam,
 } from './payments.schema';
 import { paymentsService } from './payments.service';
+import type { PaymentAdminFilter } from './payments.types';
 
 const json = <T extends object>(schema: T) => ({ content: { 'application/json': { schema } } });
 const security = [{ sessionCookie: [] }];
@@ -45,6 +48,44 @@ const listRoute = createRoute({
   responses: { 200: { description: 'Payments', ...json(AdminPaymentListResponse) } },
 });
 
+const reportRoute = createRoute({
+  method: 'get',
+  path: '/payments/report',
+  tags: ['Payments'],
+  summary: 'Totals of the filtered payments, by status, method and Manila day (admin)',
+  security,
+  request: { query: AdminFilterQuery },
+  responses: { 200: { description: 'Report', ...json(AdminReportResponse) } },
+});
+
+const exportRoute = createRoute({
+  method: 'get',
+  path: '/payments/export.csv',
+  tags: ['Payments'],
+  summary: 'The filtered payments as a CSV file, newest first (admin)',
+  security,
+  request: { query: AdminFilterQuery },
+  responses: { 200: { description: 'CSV file', content: { 'text/csv': { schema: z.string() } } } },
+});
+
+/** The query's filter fields, as the service takes them. `needsReview=true` is the older way to ask for status=needs_review. */
+function filterOf(q: z.infer<typeof AdminFilterQuery>): PaymentAdminFilter {
+  return {
+    status: q.status ?? (q.needsReview === 'true' ? 'needs_review' : undefined),
+    provider: q.provider,
+    method: q.method,
+    from: q.from,
+    to: q.to,
+    q: q.q,
+  };
+}
+
+/** `payments-2026-11-01_to_2026-11-11.csv`, named after the dates asked for. */
+function exportFileName(f: PaymentAdminFilter): string {
+  const range = f.from || f.to ? `${f.from ?? 'start'}_to_${f.to ?? 'today'}` : 'all';
+  return `payments-${range}${f.status ? `-${f.status}` : ''}.csv`;
+}
+
 /** Webhook bodies are small JSON events; refuse anything bigger before reading further. */
 const MAX_WEBHOOK_BYTES = 64 * 1024;
 
@@ -57,7 +98,7 @@ export const paymentsController = createOpenAPIApp()
   .openapi(listRoute, async (c) => {
     authorize(c, 'admin');
     const query = c.req.valid('query');
-    const result = await paymentsService.listForAdmin({ needsReviewOnly: query.needsReview === 'true', ...pageParams(query) });
+    const result = await paymentsService.listForAdmin(filterOf(query), pageParams(query));
     return c.json(
       apiResponse(
         toPage(
@@ -82,6 +123,22 @@ export const paymentsController = createOpenAPIApp()
       ),
       200,
     );
+  })
+  .openapi(reportRoute, async (c) => {
+    authorize(c, 'admin');
+    return c.json(apiResponse(await paymentsService.reportForAdmin(filterOf(c.req.valid('query')))), 200);
+  })
+  .openapi(exportRoute, async (c) => {
+    authorize(c, 'admin');
+    const filter = filterOf(c.req.valid('query'));
+    const { csv, rows, truncated } = await paymentsService.exportCsv(filter);
+    return c.body(csv, 200, {
+      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Disposition': `attachment; filename="${exportFileName(filter)}"`,
+      'Cache-Control': 'private, no-store',
+      'X-Export-Rows': String(rows),
+      'X-Export-Truncated': String(truncated),
+    });
   })
   /**
    * The webhook. Not session-authenticated and not in the OpenAPI document: a provider calls it, and it proves itself
