@@ -19,25 +19,23 @@ x-app: &app
 
 services:
   # One-shot: create or update the tables (idempotent). Runs before the app starts.
-  # migrate:
-  #   <<: *app
-  #   command: ['bun', 'run']
-  #   restart: 'no'
+  migrate:
+    <<: *app
+    command: ['bun', 'run', 'db:migrate']
+    restart: 'no'
 
   web:
     <<: *app
     build: .
     command: ['bun', 'run', 'start']
-    # Only the server itself (Nginx) can reach the app; it is not open to the internet.
     ports: ['127.0.0.1:${BRT_PORT:-8080}:3000']
-    # depends_on:
-    #   migrate:
-    #     condition: service_completed_successfully
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
 
-  # The ticket-expiry worker and the bus simulator.
   workers:
     <<: *app
     command: ['bun', 'run', 'workers']
-    # depends_on:
-    #   migrate:
-    #     condition: service_completed_successfully
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
